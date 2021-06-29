@@ -1,0 +1,84 @@
+{
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "eject": "expo eject",
+    "test": "jest --watchAll",
+    "lint": "eslint --cache \"**/*.{jsx,ts,tsx}\"",
+    "lint:fix": "eslint --cache --fix \"**/*.{jsx,ts,tsx}\""
+  },
+  "jest": {
+    "preset": "jest-expo"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{jsx,ts,tsx}": "yarn run lint:fix"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^12.0.0",
+    "@gorhom/bottom-sheet": "^2",
+    "@react-native-community/async-storage": "^1.12.1",
+    "@react-native-community/hooks": "^2.6.0",
+    "@react-native-community/masked-view": "0.1.10",
+    "@react-navigation/bottom-tabs": "5.11.2",
+    "@react-navigation/native": "~5.8.10",
+    "@react-navigation/stack": "~5.12.8",
+    "@tensorflow-models/mobilenet": "^2.1.0",
+    "@tensorflow/tfjs": "^3.7.0",
+    "@tensorflow/tfjs-react-native": "^0.5.0",
+    "expo": "40.0.1",
+    "expo-asset": "~8.2.0",
+    "expo-camera": "~9.1.0",
+    "expo-checkbox": "~1.0.0",
+    "expo-constants": "~9.3.3",
+    "expo-font": "~8.4.0",
+    "expo-gl": "~9.2.0",
+    "expo-image-picker": "~9.2.0",
+    "expo-linking": "~2.0.1",
+    "expo-permissions": "~10.0.0",
+    "expo-splash-screen": "~0.8.1",
+    "expo-status-bar": "~1.0.4",
+    "expo-web-browser": "~8.6.0",
+    "i": "^0.3.6",
+    "jpeg-js": "^0.4.3",
+    "npm": "^7.17.0",
+    "react": "16.13.1",
+    "react-dom": "16.13.1",
+    "react-native": "https://github.com/expo/react-native/archive/sdk-40.0.1.tar.gz",
+    "react-native-fs": "^2.18.0",
+    "react-native-gesture-handler": "^1.10.3",
+    "react-native-reanimated": "^1",
+    "react-native-safe-area-context": "3.1.9",
+    "react-native-screens": "~2.15.2",
+    "react-native-web": "~0.13.12"
+  },
+  "devDependencies": {
+    "@babel/core": "~7.9.0",
+    "@react-native-community/eslint-config": "^3.0.0",
+    "@types/react": "~16.9.35",
+    "@types/react-native": "~0.63.2",
+    "@typescript-eslint/eslint-plugin": "^4.27.0",
+    "@typescript-eslint/parser": "^4.27.0",
+    "eslint": "^7.29.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-react": "^7.24.0",
+    "eslint-plugin-react-hooks": "^4.2.0",
+    "husky": "^6.0.0",
+    "jest-expo": "~41.0.0",
+    "lint-staged": "^11.0.0",
+    "prettier": "^2.3.1",
+    "react-native-bundle-visualizer": "^2.2.1",
+    "react-test-renderer": "^17.0.2",
+    "typescript": "~4.0.0"
+  },
+  "private": true
+}
