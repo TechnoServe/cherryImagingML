@@ -8,7 +8,6 @@ import {
   AuthParamList,
   AppStackParamList,
 } from "../types";
-import { InferenceScreen } from "../screens/InferenceScreen";
 import { SavedPredictionsScreen } from "../screens/SavedPredictionsScreen";
 import { SavedPredictionScreen } from "../screens/SavedPredictionScreen";
 import { LoginScreen } from "../screens/LoginScreen";
@@ -22,11 +21,6 @@ export function InferenceNavigator() {
     <InferenceStack.Navigator>
       <InferenceStack.Screen
         name="Inference"
-        component={InferenceScreen}
-        options={{ headerShown: false }}
-      />
-      <InferenceStack.Screen
-        name="MainCamera"
         component={MainCameraScreen}
         options={{ headerShown: false }}
       />
