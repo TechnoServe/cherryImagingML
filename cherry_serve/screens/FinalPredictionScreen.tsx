@@ -7,6 +7,7 @@ import {
   View as DefaultView,
 } from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet";
+import { StatusBar } from "expo-status-bar";
 
 import { View, Text, TouchableOpacity } from "../components/Themed";
 import { InferenceParamList } from "../types";
@@ -76,6 +77,7 @@ export function FinalPredictionScreen({
 
   return (
     <View style={styles.container}>
+      <StatusBar style="auto" />
       <ScrollView style={styles.scrollViewContainer}>
         <View style={styles.imageWrapper}>
           <Image style={styles.image} source={{ uri: route.params.data }} />
