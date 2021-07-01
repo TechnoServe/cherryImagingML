@@ -1,16 +1,35 @@
-import React, { useCallback, useMemo, useRef } from "react";
+/* eslint-disable @typescript-eslint/no-var-requires */
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { RouteProp } from "@react-navigation/native";
 import {
   Image,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
   View as DefaultView,
 } from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { StatusBar } from "expo-status-bar";
+import * as FileSystem from "expo-file-system";
+import * as jpeg from "jpeg-js";
+import * as tf from "@tensorflow/tfjs";
+import {
+  fetch,
+  decodeJpeg,
+  bundleResourceIO,
+} from "@tensorflow/tfjs-react-native";
+import * as ImageManipulator from "expo-image-manipulator";
+import { loadLayersModel, model } from "@tensorflow/tfjs";
 
-import { View, Text, TouchableOpacity } from "../components/Themed";
 import { InferenceParamList } from "../types";
+import { View, Text, TouchableOpacity } from "../components/Themed";
+import { MonoText } from "../components/StyledText";
 
 type PredictionListItemProps = {
   color: string;
@@ -75,6 +94,99 @@ export function FinalPredictionScreen({
     console.log("handleSheetChanges", index);
   }, []);
 
+  const [predictionState, setPredictionState] = useState<boolean | null>(null);
+
+  const imageToTensor = (rawImageData) => {
+    const TO_UINT8ARRAY = true;
+    const { width, height, data } = jpeg.decode(rawImageData, TO_UINT8ARRAY);
+
+    const buffer = new Uint8Array(width * height * 3);
+    let offset = 0; // offset into original data
+    for (let i = 0; i < buffer.length; i += 3) {
+      buffer[i] = data[offset];
+      buffer[i + 1] = data[offset + 1];
+      buffer[i + 2] = data[offset + 2];
+
+      offset += 4;
+    }
+
+    return tf.tensor3d(buffer, [height, width, 3]);
+  };
+
+  const helper = async () => {
+    try {
+      const base64Image = await FileSystem.readAsStringAsync(image, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const imageBuffer = tf.util.encodeString(base64Image, "base64").buffer;
+      const raw = new Uint8Array(imageBuffer);
+      const imageTensor = imageToTensor(raw);
+      console.log("ImageTensor: ", imageTensor);
+
+      // const prediction = await model.performSegmentation(imageTensor);
+      // Handle result / Save or display prediction
+    } catch (error) {
+      console.log("Exeption Error: ", error);
+    }
+  };
+
+  const resizeImage = async (inputImage, size = 512) => {
+    const result = await ImageManipulator.manipulateAsync(
+      inputImage,
+      [{ resize: { width: size, height: size } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.PNG }
+    );
+    return result;
+  };
+
+  const runInference = async (inputImage) => {
+    const modelJson = require("../assets/model/model.json");
+    const modelWeights = require("../assets/model/weights.bin");
+
+    try {
+      // const model = await loadLayersModel(
+      //   bundleResourceIO(modelJson, modelWeights)
+      // );
+      // console.log(model);
+      // const base64Image = await FileSystem.readAsStringAsync(inputImage, {
+      //   encoding: FileSystem.EncodingType.Base64,
+      // });
+      // const imageBuffer = tf.util.encodeString(base64Image, "base64").buffer;
+      // const raw = new Uint8Array(imageBuffer);
+      // const imageTensor = imageToTensor(raw);
+      // const [prediction] = await model.predict(imageTensor);
+      // console.log(prediction);
+      // const model = await loadLayersModel(
+      //   require("../assets/model/model.tflite")
+      // );
+      // console.log(model);
+      // const imageAssetPath = Image.resolveAssetSource(source);
+      // const response = await fetch(imageAssetPath, {}, { isBinary: true });
+      // const imageData = await response.arrayBuffer();
+      // const imageTensor = decodeJpeg(imageData);
+    } catch (error) {
+      console.log("Error: ", error);
+    } finally {
+      setTimeout(() => setPredictionState(true), 2000);
+      setTimeout(() => bottomSheetRef.current?.snapTo(1), 3000);
+    }
+  };
+
+  useEffect(() => {
+    runInference(route.params.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (predictionState == null) {
+    return (
+      <View style={{ justifyContent: "center", alignItems: "center", flex: 1 }}>
+        <StatusBar style="auto" />
+        <MonoText style={{ marginBottom: 32 }}>Generating Results</MonoText>
+        <ActivityIndicator size="large" color="red" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
@@ -92,7 +204,7 @@ export function FinalPredictionScreen({
 
       <BottomSheet
         ref={bottomSheetRef}
-        index={1}
+        index={0}
         snapPoints={snapPoints}
         onChange={handleSheetChanges}
       >

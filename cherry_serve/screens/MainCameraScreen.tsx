@@ -59,11 +59,6 @@ function ConfirmationComponent({
     setImage("");
   };
 
-  const runInference = () => {
-    console.log(image);
-    navigateToFinalPredictionScreen();
-  };
-
   return (
     <View style={[styles.confirmationContainer]}>
       <StatusBar style="auto" hideTransitionAnimation="fade" />
@@ -92,7 +87,7 @@ function ConfirmationComponent({
               onPress={() => setImage("")}
             />
             <ThemedButton
-              onPress={runInference}
+              onPress={navigateToFinalPredictionScreen}
               style={[styles.button, { marginLeft: 8 }]}
             >
               <Text>Yes, Proceed</Text>
@@ -115,10 +110,10 @@ export function MainCameraScreen({
 
   const captureImage = async () => {
     if (cameraRef.current) {
-      const { uri } = await cameraRef.current.takePictureAsync({
+      const capturedImage = await cameraRef.current.takePictureAsync({
         skipProcessing: true,
       });
-      setImage(uri);
+      setImage(capturedImage.uri);
     }
     // const result = await ImagePicker.launchCameraAsync({
     //   mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -178,7 +173,6 @@ export function MainCameraScreen({
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        // eslint-disable-next-line no-alert
         Alert.alert(
           "No access to gallery",
           "Sorry, we need camera roll permissions to make this work!"
