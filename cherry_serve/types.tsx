@@ -3,8 +3,6 @@
  * https://reactnavigation.org/docs/typescript/
  */
 
-import { string } from "@tensorflow/tfjs";
-
 export type RootStackParamList = {
   Root: undefined;
   NotFound: undefined;
@@ -36,9 +34,9 @@ export type SavedPredictionParamList = {
 
 export type InferenceParamList = {
   Inference: undefined;
+  MainCamera: undefined;
   SavedPredictions: undefined;
   Auth: undefined;
-  MainCamera: undefined;
   FinalPrediction: { data: PredictionInput };
 };
 
@@ -47,6 +45,7 @@ export type PredictionInput = string;
 export type PredictionResult = {
   original: typeof require;
   mask: typeof require;
+  checked: boolean;
   scores: number[];
   synced: boolean;
   state: string;

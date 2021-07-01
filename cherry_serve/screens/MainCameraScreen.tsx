@@ -5,6 +5,7 @@ import { StackNavigationProp, StackScreenProps } from "@react-navigation/stack";
 import {
   StyleSheet,
   Image,
+  Alert,
   TouchableOpacity,
   ScrollView,
   Dimensions,
@@ -23,6 +24,7 @@ import {
   TouchableOpacity as ThemedButton,
   useThemeColor,
 } from "../components/Themed";
+import { MonoText } from "../components/StyledText";
 import { InferenceParamList } from "../types";
 
 const windowWidth = Dimensions.get("window").width;
@@ -53,7 +55,12 @@ function ConfirmationComponent({
   const navigation = useNavigation<SavedPredictionScreenNavigationProp>();
 
   const navigateToFinalPredictionScreen = () => {
-    navigation.replace("FinalPrediction", { data: image });
+    navigation.push("FinalPrediction", { data: image });
+    setImage("");
+  };
+
+  const runInference = () => {
+    navigateToFinalPredictionScreen();
   };
 
   return (
@@ -84,7 +91,7 @@ function ConfirmationComponent({
               onPress={() => setImage("")}
             />
             <ThemedButton
-              onPress={navigateToFinalPredictionScreen}
+              onPress={runInference}
               style={[styles.button, { marginLeft: 8 }]}
             >
               <Text>Yes, Proceed</Text>
@@ -106,53 +113,77 @@ export function MainCameraScreen({
   const cameraRef = useRef<Camera>();
 
   const captureImage = async () => {
-    // if (cameraRef.current) {
-    //   const { uri } = await cameraRef.current.takePictureAsync({
-    //     skipProcessing: true,
-    //   });
-    //   setImage(uri);
-    // }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
+    if (cameraRef.current) {
+      const { uri } = await cameraRef.current.takePictureAsync({
+        skipProcessing: true,
+      });
+      setImage(uri);
+    }
+    // const result = await ImagePicker.launchCameraAsync({
+    //   mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    //   allowsEditing: true,
+    //   aspect: [1, 1],
+    //   quality: 1,
+    // });
 
-    if (!result.cancelled) {
-      setImage(result.uri);
+    // if (!result.cancelled) {
+    //   setImage(result.uri);
+    // }
+  };
+
+  const getCameraPermissions = async () => {
+    const { status: initialStatus } = await Camera.getPermissionsAsync();
+    if (initialStatus !== "granted") {
+      const { status } = await Camera.requestPermissionsAsync();
+      setHasPermission(status === "granted");
     }
   };
 
   useEffect(() => {
     (async () => {
-      const { status } = await Camera.getPermissionsAsync();
-      // const { status } = await Camera.requestPermissionsAsync();
-      setHasPermission(status === "granted");
+      await getCameraPermissions();
     })();
   }, []);
 
   if (hasPermission === null) {
     return <View />;
   }
+
   if (hasPermission === false) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="light" hideTransitionAnimation="fade" />
+      <View style={styles.plainContainer}>
+        <StatusBar style="auto" />
         <Text style={styles.title}>No access to camera</Text>
+        <MonoText
+          style={{
+            textAlign: "center",
+            margin: 48,
+          }}
+        >
+          We need access to your camera for this to work.
+        </MonoText>
+        <ThemedButton style={styles.button} onPress={getCameraPermissions}>
+          <Text>Grant permissions</Text>
+        </ThemedButton>
       </View>
     );
   }
 
   const pickImage = async () => {
-    (async () => {
+    const { status: initialStatus } =
+      await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (initialStatus !== "granted") {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         // eslint-disable-next-line no-alert
-        alert("Sorry, we need camera roll permissions to make this work!");
+        Alert.alert(
+          "No access to gallery",
+          "Sorry, we need camera roll permissions to make this work!"
+        );
+        return;
       }
-    })();
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -178,9 +209,7 @@ export function MainCameraScreen({
         useCamera2Api
         style={styles.camera}
         type={type}
-      >
-        {/* <View style={styles.captureGuide} /> */}
-      </Camera>
+      />
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.galleryButton}
@@ -216,6 +245,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "black",
   },
+  plainContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   title: {
     fontSize: 20,
     fontWeight: "bold",
@@ -236,12 +270,11 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "center",
     backgroundColor: "transparent",
     paddingBottom: 30,
     paddingHorizontal: 30,
   },
-  flipButton: {},
   captureButton: {
     width: 60,
     height: 60,
@@ -251,7 +284,20 @@ const styles = StyleSheet.create({
     borderStyle: "solid",
     borderColor: "#FFFFFF",
   },
-  galleryButton: {},
+  flipButton: {
+    width: 60,
+    height: 60,
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  galleryButton: {
+    width: 60,
+    height: 60,
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
   topRightButton: {
     position: "absolute",
     top: 60,
@@ -260,13 +306,6 @@ const styles = StyleSheet.create({
   },
   cameraScreenBottomIcon: {
     marginBottom: 5,
-  },
-  captureGuide: {
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    width: windowWidth * 0.7,
-    height: windowWidth * 0.7,
-    backgroundColor: "transparent",
   },
   confirmationContainer: {
     flex: 1,
