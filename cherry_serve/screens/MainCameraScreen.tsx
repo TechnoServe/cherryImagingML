@@ -60,6 +60,7 @@ function ConfirmationComponent({
   };
 
   const runInference = () => {
+    console.log(image);
     navigateToFinalPredictionScreen();
   };
 
@@ -137,6 +138,7 @@ export function MainCameraScreen({
       const { status } = await Camera.requestPermissionsAsync();
       setHasPermission(status === "granted");
     }
+    setHasPermission(initialStatus === "granted");
   };
 
   useEffect(() => {
