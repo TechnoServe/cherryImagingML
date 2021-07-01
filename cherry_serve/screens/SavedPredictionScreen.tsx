@@ -1,12 +1,13 @@
 import React from "react";
 import { RouteProp } from "@react-navigation/native";
-import { Image, StyleSheet, ScrollView } from "react-native";
+import { StyleSheet, ScrollView } from "react-native";
 
 import {
   View,
   Text,
   TouchableOpacity,
   ColoredButton,
+  ThemedImage,
 } from "../components/Themed";
 import { MonoText } from "../components/StyledText";
 import { SavedPredictionsParamList } from "../types";
@@ -29,14 +30,8 @@ export function SavedPredictionScreen({
       <ScrollView style={styles.scrollViewContainer}>
         <MonoText>{parseDate(new Date()) + [200]}</MonoText>
         <View style={styles.imageWrapper}>
-          <Image
-            style={styles.image}
-            source={require("../assets/images/cherry.png")}
-          />
-          <Image
-            style={styles.image}
-            source={require("../assets/images/cherry.png")}
-          />
+          <ThemedImage source={0} style={styles.image} name="cherry" />
+          <ThemedImage source={0} style={styles.image} name="cherry" />
         </View>
         <Text>{JSON.stringify(params)}</Text>
         <View style={styles.buttonWrapper}>

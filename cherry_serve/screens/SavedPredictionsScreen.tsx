@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StackNavigationProp } from "@react-navigation/stack";
 import {
   useNavigation,
   CompositeNavigationProp,
 } from "@react-navigation/native";
-import { StyleSheet, Image, FlatList } from "react-native";
+import { StyleSheet, FlatList } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import Checkbox from "expo-checkbox";
 
@@ -77,8 +77,13 @@ const SavedpredictionsHeader = ({ selectAll, setSelectAll }) => {
   );
 };
 
-const SavedPredictionListItem = ({ data }) => {
+const SavedPredictionListItem = ({ data, selectAll }) => {
   const [checked, setChecked] = useState<boolean>(false);
+
+  useEffect(() => {
+    setChecked(selectAll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectAll]);
 
   type SavedPredictionScreenNavigationProp = CompositeNavigationProp<
     StackNavigationProp<SavedPredictionsParamList, "SavedPrediction">,
@@ -110,10 +115,15 @@ const SavedPredictionListItem = ({ data }) => {
             style={styles.imageWrapperWithText}
           >
             <View style={styles.imageWrapper}>
-              <Image style={styles.predictedImage} source={data.original} />
-              <Image
-                style={[styles.predictedImage, { marginLeft: -2 }]}
+              <ThemedImage
+                source={data.original}
+                style={styles.predictedImage}
+                name="cherry"
+              />
+              <ThemedImage
                 source={data.mask}
+                style={[styles.predictedImage, { marginLeft: -2 }]}
+                name="cherry"
               />
             </View>
           </TouchableOpacity>
@@ -138,6 +148,7 @@ const SamplePredictionListItem: PredictionResult = {
   mask: require("../assets/images/cherry.png"),
   scores: [80, 15, 0],
   synced: false,
+  checked: false,
   state: "unsynced",
   createdAt: new Date().getTime(),
   syncedAt: new Date().getTime(),
@@ -149,6 +160,10 @@ export function SavedPredictionsScreen() {
     Array(0).fill(SamplePredictionListItem)
   );
   const [selectAll, setSelectAll] = useState<boolean>(false);
+
+  const setChecked = (item) => {
+    item.checked = true;
+  };
 
   if (predictions.length === 0) {
     return (
@@ -170,7 +185,9 @@ export function SavedPredictionsScreen() {
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
         keyExtractor={(item, index) => index + ""}
-        renderItem={() => <SavedPredictionListItem data={predictions[0]} />}
+        renderItem={({ item }) => (
+          <SavedPredictionListItem data={item} {...{ selectAll }} />
+        )}
         ListHeaderComponent={
           <SavedpredictionsHeader {...{ selectAll, setSelectAll }} />
         }
