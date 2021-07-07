@@ -111,6 +111,9 @@ There are currently no tests
   // TODO: Write tests
 ```
 
+## Converting the model
+https://github.com/tensorflow/tfjs/blob/master/tfjs-converter/README.md
+
   
 
 ## Authors
