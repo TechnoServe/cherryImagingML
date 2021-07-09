@@ -17,15 +17,7 @@ import {
 import BottomSheet from "@gorhom/bottom-sheet";
 import { StatusBar } from "expo-status-bar";
 import * as FileSystem from "expo-file-system";
-import * as jpeg from "jpeg-js";
-import * as tf from "@tensorflow/tfjs";
-import {
-  fetch,
-  decodeJpeg,
-  bundleResourceIO,
-} from "@tensorflow/tfjs-react-native";
 import * as ImageManipulator from "expo-image-manipulator";
-import { loadLayersModel, model } from "@tensorflow/tfjs";
 
 import { InferenceParamList } from "../types";
 import { View, Text, TouchableOpacity } from "../components/Themed";
@@ -96,74 +88,9 @@ export function FinalPredictionScreen({
 
   const [predictionState, setPredictionState] = useState<boolean | null>(null);
 
-  const imageToTensor = (rawImageData) => {
-    const TO_UINT8ARRAY = true;
-    const { width, height, data } = jpeg.decode(rawImageData, TO_UINT8ARRAY);
-
-    const buffer = new Uint8Array(width * height * 3);
-    let offset = 0; // offset into original data
-    for (let i = 0; i < buffer.length; i += 3) {
-      buffer[i] = data[offset];
-      buffer[i + 1] = data[offset + 1];
-      buffer[i + 2] = data[offset + 2];
-
-      offset += 4;
-    }
-
-    return tf.tensor3d(buffer, [height, width, 3]);
-  };
-
-  const resizeImage = async (inputImage, size = 512) => {
-    const result = await ImageManipulator.manipulateAsync(
-      inputImage,
-      [{ resize: { width: size, height: size } }],
-      { compress: 0.8, format: ImageManipulator.SaveFormat.PNG }
-    );
-    return result;
-  };
-
-  const helper = async () => {
-    try {
-      const base64Image = await FileSystem.readAsStringAsync(image, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const imageBuffer = tf.util.encodeString(base64Image, "base64").buffer;
-      const raw = new Uint8Array(imageBuffer);
-      const imageTensor = imageToTensor(raw);
-      console.log("ImageTensor: ", imageTensor);
-
-      // const prediction = await model.performSegmentation(imageTensor);
-      // Handle result / Save or display prediction
-    } catch (error) {
-      console.log("Exeption Error: ", error);
-    }
-  };
-
   const runInference = async (inputImage) => {
-    // const modelJson = require("../assets/models/model.json");
-    // const modelWeights = require("../assets/models/weights.bin");
-
     try {
-      // const model = await loadLayersModel(
-      //   bundleResourceIO(modelJson, modelWeights)
-      // );
-      // console.log(model);
-      // const base64Image = await FileSystem.readAsStringAsync(inputImage, {
-      //   encoding: FileSystem.EncodingType.Base64,
-      // });
-      // const imageBuffer = tf.util.encodeString(base64Image, "base64").buffer;
-      // const raw = new Uint8Array(imageBuffer);
-      // const imageTensor = imageToTensor(raw);
-      // const [prediction] = await model.predict(imageTensor);
-      // console.log(prediction);
-      // const model = await loadLayersModel(
-      //   require("../assets/model/model.tflite")
-      // );
-      // console.log(model);
-      // const imageAssetPath = Image.resolveAssetSource(source);
-      // const response = await fetch(imageAssetPath, {}, { isBinary: true });
-      // const imageData = await response.arrayBuffer();
-      // const imageTensor = decodeJpeg(imageData);
+      console.log(inputImage)
     } catch (error) {
       console.log("Error: ", error);
     } finally {
