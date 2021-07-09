@@ -113,6 +113,15 @@ export function FinalPredictionScreen({
     return tf.tensor3d(buffer, [height, width, 3]);
   };
 
+  const resizeImage = async (inputImage, size = 512) => {
+    const result = await ImageManipulator.manipulateAsync(
+      inputImage,
+      [{ resize: { width: size, height: size } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.PNG }
+    );
+    return result;
+  };
+
   const helper = async () => {
     try {
       const base64Image = await FileSystem.readAsStringAsync(image, {
@@ -130,18 +139,9 @@ export function FinalPredictionScreen({
     }
   };
 
-  const resizeImage = async (inputImage, size = 512) => {
-    const result = await ImageManipulator.manipulateAsync(
-      inputImage,
-      [{ resize: { width: size, height: size } }],
-      { compress: 0.8, format: ImageManipulator.SaveFormat.PNG }
-    );
-    return result;
-  };
-
   const runInference = async (inputImage) => {
-    const modelJson = require("../assets/model/model.json");
-    const modelWeights = require("../assets/model/weights.bin");
+    // const modelJson = require("../assets/models/model.json");
+    // const modelWeights = require("../assets/models/weights.bin");
 
     try {
       // const model = await loadLayersModel(

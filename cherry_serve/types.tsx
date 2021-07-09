@@ -12,6 +12,7 @@ export type AppStackParamList = {
   Inference: undefined;
   SavedPredictions: undefined;
   Auth: undefined;
+  Sandbox: undefined;
 };
 
 export type AuthParamList = {

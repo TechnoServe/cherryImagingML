@@ -13,6 +13,7 @@ import { SavedPredictionScreen } from "../screens/SavedPredictionScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { MainCameraScreen } from "../screens/MainCameraScreen";
 import { FinalPredictionScreen } from "../screens/FinalPredictionScreen";
+import { SandboxScreen } from "../screens/Sandbox";
 
 const InferenceStack = createStackNavigator<InferenceParamList>();
 
@@ -80,7 +81,7 @@ const AppStack = createStackNavigator<AppStackParamList>();
 
 export function AppNavigator() {
   return (
-    <AppStack.Navigator initialRouteName="Inference" headerMode="none">
+    <AppStack.Navigator initialRouteName="Sandbox" headerMode="none">
       <AppStack.Screen
         name="Inference"
         component={InferenceNavigator}
@@ -95,6 +96,11 @@ export function AppNavigator() {
         name="Auth"
         component={AuthNavigator}
         options={{ headerTitle: "Auth" }}
+      />
+      <AppStack.Screen
+        name="Sandbox"
+        component={SandboxScreen}
+        options={{ headerTitle: "Sandbox" }}
       />
     </AppStack.Navigator>
   );
