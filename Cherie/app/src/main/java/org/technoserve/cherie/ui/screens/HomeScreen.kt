@@ -1,40 +1,65 @@
 package org.technoserve.cherie.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.navigation.NavHostController
+import org.technoserve.cherie.ui.navigation.NavigationItem
+
+enum class HomeNavType { INFERENCE, LOGS }
 
 @Composable
-fun HomeScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colors.background)
-            .wrapContentSize(Alignment.Center)
-    ) {
-        Text(
-            text = "Home View",
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colors.onBackground,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            textAlign = TextAlign.Center,
-            fontSize = 25.sp
-        )
+fun HomeScreen(navController: NavHostController) {
+    val navItemState = rememberSaveable { mutableStateOf(HomeNavType.INFERENCE) }
+    Scaffold(
+        bottomBar = { HomeBottomNavigation(navItemState) },
+        content = { HomeBodyContent(homeNavType = navItemState.value, navController = navController) }
+    )
+}
+
+@Composable
+fun HomeBodyContent(homeNavType: HomeNavType, navController: NavHostController) {
+    Crossfade(
+        targetState = homeNavType,
+        animationSpec = tween(240)
+    ) { navType ->
+        when (navType) {
+            HomeNavType.INFERENCE -> InferenceScreen(navController)
+            HomeNavType.LOGS -> SavedPredictionsScreen(navController)
+        }
     }
 }
 
-@Preview(showBackground = true)
+
 @Composable
-fun HomeScreenPreview() {
-    HomeScreen()
+fun HomeBottomNavigation(homeNavItemState: MutableState<HomeNavType>) {
+    BottomNavigation(
+        backgroundColor = MaterialTheme.colors.primary,
+        contentColor = MaterialTheme.colors.onSurface,
+    ) {
+        BottomNavigationItem(
+            icon = { Icon(painterResource(id = NavigationItem.Inference.icon), contentDescription = NavigationItem.Inference.title) },
+            label = { Text(text = NavigationItem.Inference.title) },
+            selectedContentColor = Color.White,
+            unselectedContentColor = Color.White.copy(0.4f),
+            alwaysShowLabel = true,
+            selected = homeNavItemState.value == HomeNavType.INFERENCE,
+            onClick = { homeNavItemState.value = HomeNavType.INFERENCE },
+        )
+        BottomNavigationItem(
+            icon = { Icon(painterResource(id = NavigationItem.Logs.icon), contentDescription = NavigationItem.Logs.title) },
+            label = { Text(text = NavigationItem.Logs.title) },
+            selectedContentColor = Color.White,
+            unselectedContentColor = Color.White.copy(0.4f),
+            alwaysShowLabel = true,
+            selected = homeNavItemState.value == HomeNavType.LOGS,
+            onClick = { homeNavItemState.value = HomeNavType.LOGS },
+        )
+    }
 }
