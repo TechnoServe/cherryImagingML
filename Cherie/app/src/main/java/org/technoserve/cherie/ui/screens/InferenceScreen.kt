@@ -10,6 +10,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -46,7 +47,10 @@ fun InferenceScreen(navController: NavController) {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 navController.navigate(NavigationItem.Profile.route)
         }) {
-            Text(text = "Profile Screen")
+            Text(
+                text = "Profile Screen",
+                color = Color.White
+            )
         }
     }
 }
