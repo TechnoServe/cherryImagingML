@@ -5,23 +5,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
-import androidx.core.content.ContextCompat
-import org.technoserve.cherie.ui.theme.ComposeGenesisTheme
+import org.technoserve.cherie.ui.theme.CherieTheme
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.*
-import androidx.navigation.navigation
 import org.technoserve.cherie.ui.navigation.NavigationItem
 import org.technoserve.cherie.ui.screens.HomeScreen
-import org.technoserve.cherie.ui.screens.InferenceScreen
 import org.technoserve.cherie.ui.screens.ProfileScreen
-import org.technoserve.cherie.ui.screens.SavedPredictionsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 //        window.statusBarColor = ContextCompat.getColor(this, android.R.color.transparent)
         setContent {
-            ComposeGenesisTheme {
+            CherieTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(color = MaterialTheme.colors.background) {
                     AppRoot()

@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.ComposeGenesis" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.Cherie" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/primaryColor</item>
         <item name="colorPrimaryVariant">@color/primaryDarkColor</item>
@@ -14,12 +14,12 @@
         <!-- Customize your theme here. -->
     </style>
 
-    <style name="Theme.ComposeGenesis.NoActionBar">
+    <style name="Theme.Cherie.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
 
-    <style name="Theme.ComposeGenesis.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="Theme.Cherie.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
-    <style name="Theme.ComposeGenesis.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    <style name="Theme.Cherie.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 </resources>
