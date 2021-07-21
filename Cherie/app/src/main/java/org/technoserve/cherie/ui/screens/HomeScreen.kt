@@ -2,11 +2,13 @@ package org.technoserve.cherie.ui.screens
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavHostController
@@ -19,7 +21,8 @@ fun HomeScreen(navController: NavHostController) {
     val navItemState = rememberSaveable { mutableStateOf(HomeNavType.INFERENCE) }
     Scaffold(
         bottomBar = { HomeBottomNavigation(navItemState) },
-        content = { HomeBodyContent(homeNavType = navItemState.value, navController = navController) }
+        content = { HomeBodyContent(homeNavType = navItemState.value, navController = navController) },
+        modifier = Modifier.fillMaxWidth(),
     )
 }
 
@@ -27,7 +30,8 @@ fun HomeScreen(navController: NavHostController) {
 fun HomeBodyContent(homeNavType: HomeNavType, navController: NavHostController) {
     Crossfade(
         targetState = homeNavType,
-        animationSpec = tween(240)
+        animationSpec = tween(240),
+        modifier = Modifier.fillMaxWidth(),
     ) { navType ->
         when (navType) {
             HomeNavType.INFERENCE -> InferenceScreen(navController)
