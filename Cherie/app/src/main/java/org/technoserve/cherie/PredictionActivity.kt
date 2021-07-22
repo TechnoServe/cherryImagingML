@@ -18,9 +18,8 @@ class PredictionActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 //        window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
         setContent {
-            val navController = rememberNavController()
             CherieTheme {
-                PredictionScreen(navController = navController, imageAsByteArray=imageAsByteArray)
+                PredictionScreen(imageAsByteArray=imageAsByteArray)
             }
         }
     }

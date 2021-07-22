@@ -1,5 +1,6 @@
 package org.technoserve.cherie.ui.screens
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -64,7 +65,7 @@ fun assetFilePath(context: Context, assetName: String): String? {
 }
 
 @Composable
-fun PredictionScreen(navController: NavController, imageAsByteArray: ByteArray) {
+fun PredictionScreen(imageAsByteArray: ByteArray) {
 
     var mModule: Module? = null;
 
@@ -73,11 +74,13 @@ fun PredictionScreen(navController: NavController, imageAsByteArray: ByteArray) 
     val context = LocalContext.current
     val complete = remember { mutableStateOf(false) }
 
+    val startTime = System.nanoTime()
     try {
         mModule = LiteModuleLoader.load(assetFilePath(context, "pix2pix_benchmark.ptl"))
     } catch (e: IOException) {
         Log.e("Cherie", "Error reading assets", e)
     }
+    Log.d("Load Model", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
 
     fun runModel(): Unit{
         val NORM_MEAN_RGB = floatArrayOf(0.5f, 0.5f, 0.5f)
@@ -126,14 +129,15 @@ fun PredictionScreen(navController: NavController, imageAsByteArray: ByteArray) 
     }
 
 
-//    runModel()
+    runModel()
+    Log.d("Run Model", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
 
     val onRetry = {
         runModel()
     }
 
     Scaffold(
-        topBar = { Nav(navController, onRetry = onRetry ) }
+        topBar = { Nav(onRetry = onRetry ) }
     ) {
         Column(
             modifier = Modifier
@@ -197,7 +201,8 @@ fun PredictionScreen(navController: NavController, imageAsByteArray: ByteArray) 
 }
 
 @Composable
-fun Nav(navController: NavController, onRetry: () -> Unit){
+fun Nav(onRetry: () -> Unit){
+    val context = LocalContext.current as Activity
     TopAppBar(
         title = {
             Text(
@@ -209,7 +214,7 @@ fun Nav(navController: NavController, onRetry: () -> Unit){
         backgroundColor = MaterialTheme.colors.primary,
         contentColor = Color.Black,
         navigationIcon = {
-            IconButton(onClick = { navController.popBackStack() }) {
+            IconButton(onClick = { context?.finish() }) {
                 Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = null, tint = Color.White)
             }
         },

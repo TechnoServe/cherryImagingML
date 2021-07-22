@@ -43,20 +43,23 @@ import java.io.File
 import java.io.IOException
 import android.graphics.*
 import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat.startActivity
 import org.technoserve.cherie.PredictionActivity
+import org.technoserve.cherie.ui.navigation.NavigationItem
 import java.io.ByteArrayOutputStream
 
-fun get512Bitmap(bitmap: Bitmap, width: Int, height: Int) :Bitmap {
+fun get512Bitmap(bitmap: Bitmap, width: Int, height: Int): Bitmap {
     var bmp = bitmap;
-    bmp = if (width >= height){
-        Bitmap.createBitmap(bmp, width/2 - height/2, 0, height, height)
+    bmp = if (width >= height) {
+        Bitmap.createBitmap(bmp, width / 2 - height / 2, 0, height, height)
     } else {
-        Bitmap.createBitmap(bmp, 0, height/2 - width/2, width, width)
+        Bitmap.createBitmap(bmp, 0, height / 2 - width / 2, width, width)
     }
     bmp = Bitmap.createScaledBitmap(bmp, 512, 512, true)
     return bmp
@@ -178,10 +181,19 @@ fun InferenceScreen(navController: NavController) {
         bitmap.value?.compress(Bitmap.CompressFormat.JPEG, 100, stream)
         val imgAsByteArray: ByteArray = stream.toByteArray()
 
+        // Wipe state
+        imageUri.value = null
+        bitmap.value = null
+        currentPhotoPath.value = ""
+
+        val startTime = System.nanoTime()
+
         val intent = PredictionActivity.newIntent(context, imgAsByteArray)
+        Log.d("Intent creation", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
         // Image from camera is too large and crashes the when the next line is run
         // The Binder transaction buffer has a limited fixed size of 1Mb
         context.startActivity(intent)
+        Log.d("Activity Move", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
     }
 
     Column(
@@ -190,7 +202,7 @@ fun InferenceScreen(navController: NavController) {
             .fillMaxWidth()
             .background(color = MaterialTheme.colors.primary)
     ) {
-        HeaderWithIcon()
+        HeaderWithIcon(navController)
         RowLayout(loadFromGallery, launchCamera)
         bitmap.value?.let {
             FullScreenDialog(bitmap.value != null, it, dismissDialog, proceedToPredictionScreen)
@@ -200,24 +212,65 @@ fun InferenceScreen(navController: NavController) {
 
 
 @Composable
-fun HeaderWithIcon() {
-    Image(
-        painter = painterResource(id = R.drawable.cherry_white),
-        contentDescription = "",
-        contentScale = ContentScale.Inside,
-        modifier = Modifier
-            .height(240.dp)
-            .padding(top = 60.dp)
-    )
-    Spacer(modifier = Modifier.height(12.dp))
-    Text(text = "Cherie", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-    Spacer(modifier = Modifier.height(60.dp))
+fun HeaderWithIcon(navController: NavController) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(32.dp)
+        ) {
+            FloatingActionButton(
+                contentColor = MaterialTheme.colors.primary,
+                backgroundColor = Color.White,
+                onClick = {
+                    navController.navigate(NavigationItem.Profile.route)
+                },
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 4.dp
+                ),
+                modifier = Modifier.size(48.dp, 48.dp)
+            ) {
+                Icon(Icons.Outlined.Person, "", tint = MaterialTheme.colors.primaryVariant)
+            }
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.cherry_white),
+                contentDescription = "",
+                contentScale = ContentScale.Inside,
+                modifier = Modifier
+                    .height(240.dp)
+                    .padding(top = 60.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Cherie",
+                color = Color.White,
+                fontSize = 25.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(60.dp))
+        }
+    }
 }
 
 @Composable
-fun FullScreenDialog(showDialog:Boolean, image: Bitmap, onClose:()->Unit, onConfirm:()->Unit) {
+fun FullScreenDialog(
+    showDialog: Boolean,
+    image: Bitmap,
+    onClose: () -> Unit,
+    onConfirm: () -> Unit
+) {
     if (showDialog) {
-        Dialog(onDismissRequest =  onClose ) {
+        Dialog(onDismissRequest = onClose) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 shape = RoundedCornerShape(16.dp, 16.dp, 0.dp, 0.dp),
@@ -230,7 +283,7 @@ fun FullScreenDialog(showDialog:Boolean, image: Bitmap, onClose:()->Unit, onConf
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(32.dp)
-                    ){
+                    ) {
                         FloatingActionButton(
                             contentColor = MaterialTheme.colors.onSurface,
                             backgroundColor = Color.White,
@@ -253,7 +306,9 @@ fun FullScreenDialog(showDialog:Boolean, image: Bitmap, onClose:()->Unit, onConf
                             bitmap = image.asImageBitmap(),
                             contentDescription = null,
                             contentScale = ContentScale.FillWidth,
-                            modifier = Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 32.dp, end = 32.dp)
                         )
                     }
                     Row(
@@ -262,7 +317,7 @@ fun FullScreenDialog(showDialog:Boolean, image: Bitmap, onClose:()->Unit, onConf
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 36.dp),
                         horizontalArrangement = Arrangement.Center
-                    ){
+                    ) {
                         Button(
                             onClick = { onClose() },
                             modifier = Modifier
@@ -270,7 +325,7 @@ fun FullScreenDialog(showDialog:Boolean, image: Bitmap, onClose:()->Unit, onConf
                                 .background(MaterialTheme.colors.background)
                                 .border(1.dp, MaterialTheme.colors.primary),
                             shape = RoundedCornerShape(0),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background ),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background),
                             elevation = ButtonDefaults.elevation(
                                 defaultElevation = 0.dp,
                                 pressedElevation = 4.dp,
