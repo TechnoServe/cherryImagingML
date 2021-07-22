@@ -77,24 +77,26 @@ fun InferenceScreen(navController: NavController) {
     val selectImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        imageUri.value = uri
-        if (Build.VERSION.SDK_INT < 28) {
-            bitmap.value = MediaStore.Images
-                .Media.getBitmap(context.contentResolver, uri)
+        if(uri != null){
+            imageUri.value = uri
+            if (Build.VERSION.SDK_INT < 28) {
+                bitmap.value = MediaStore.Images
+                    .Media.getBitmap(context.contentResolver, uri)
 
-        } else {
-            val source = uri?.let {
-                ImageDecoder
-                    .createSource(context.contentResolver, it)
+            } else {
+                val source = uri?.let {
+                    ImageDecoder
+                        .createSource(context.contentResolver, it)
+                }
+                bitmap.value = source?.let { it1 -> ImageDecoder.decodeBitmap(it1) }
             }
-            bitmap.value = source?.let { it1 -> ImageDecoder.decodeBitmap(it1) }
-        }
 
-        val bitmapWidth = bitmap.value?.width!!
-        val bitmapHeight = bitmap.value?.height!!
-        var bmp = bitmap.value!!
-        // TODO: Resize to 512 x 512
-        bitmap.value = get512Bitmap(bmp, bitmapWidth, bitmapHeight)
+            val bitmapWidth = bitmap.value?.width!!
+            val bitmapHeight = bitmap.value?.height!!
+            var bmp = bitmap.value!!
+            // TODO: Resize to 512 x 512
+            bitmap.value = get512Bitmap(bmp, bitmapWidth, bitmapHeight)
+        }
     }
 
     @Throws(IOException::class)
