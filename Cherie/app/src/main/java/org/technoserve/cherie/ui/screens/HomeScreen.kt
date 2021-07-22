@@ -20,9 +20,9 @@ enum class HomeNavType { INFERENCE, LOGS }
 fun HomeScreen(navController: NavHostController) {
     val navItemState = rememberSaveable { mutableStateOf(HomeNavType.INFERENCE) }
     Scaffold(
-        bottomBar = { HomeBottomNavigation(navItemState) },
-        content = { HomeBodyContent(homeNavType = navItemState.value, navController = navController) },
         modifier = Modifier.fillMaxWidth(),
+        content = { HomeBodyContent(homeNavType = navItemState.value, navController = navController) },
+        bottomBar = { HomeBottomNavigation(navItemState) },
     )
 }
 

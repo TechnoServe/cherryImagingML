@@ -1,6 +1,5 @@
 package org.technoserve.cherie.ui.screens
 
-import android.R.attr
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -11,10 +10,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.launch
-import androidx.annotation.CallSuper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -40,40 +35,33 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import org.technoserve.cherie.BuildConfig
 import org.technoserve.cherie.R
 import java.io.File
 import java.io.IOException
-import android.R.attr.angle
 import android.graphics.*
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.ui.focus.focusModifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat.startActivity
+import org.technoserve.cherie.PredictionActivity
+import java.io.ByteArrayOutputStream
 
-
-fun getRandomFilepath(
-    context: Context,
-    extension: String,
-    directory: String = Environment.DIRECTORY_PICTURES
-): String {
-    return "${context.getExternalFilesDir(directory)?.absolutePath}/${System.currentTimeMillis()}.$extension"
+fun get512Bitmap(bitmap: Bitmap, width: Int, height: Int) :Bitmap {
+    var bmp = bitmap;
+    bmp = if (width >= height){
+        Bitmap.createBitmap(bmp, width/2 - height/2, 0, height, height)
+    } else {
+        Bitmap.createBitmap(bmp, 0, height/2 - width/2, width, width)
+    }
+    bmp = Bitmap.createScaledBitmap(bmp, 512, 512, true)
+    return bmp
 }
 
-fun getRandomUri(
-    context: Context,
-    extension: String,
-    directory: String = Environment.DIRECTORY_PICTURES
-): Uri {
-    return getUriFromPath(context, getRandomFilepath(context, extension, directory))
-}
-
-fun getUriFromPath(context: Context, path: String): Uri {
-    return FileProvider.getUriForFile(
-        context,
-        "${BuildConfig.APPLICATION_ID}.provider",
-        File(path)
-    )
-}
 
 @Composable
 fun InferenceScreen(navController: NavController) {
@@ -98,6 +86,12 @@ fun InferenceScreen(navController: NavController) {
             }
             bitmap.value = source?.let { it1 -> ImageDecoder.decodeBitmap(it1) }
         }
+
+        val bitmapWidth = bitmap.value?.width!!
+        val bitmapHeight = bitmap.value?.height!!
+        var bmp = bitmap.value!!
+        // TODO: Resize to 512 x 512
+        bitmap.value = get512Bitmap(bmp, bitmapWidth, bitmapHeight)
     }
 
     @Throws(IOException::class)
@@ -116,9 +110,7 @@ fun InferenceScreen(navController: NavController) {
     }
 
 
-
-
-    val startForResultToLoadImage =
+    val takePicture =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
                 try {
@@ -151,19 +143,8 @@ fun InferenceScreen(navController: NavController) {
             }
         }
 
-    val takePicture =
-        rememberLauncherForActivityResult(
-            contract =
-            ActivityResultContracts.TakePicture()
-        ) { imageCaptured ->
-            if (imageCaptured) {
-                // Do stuff with your Uri here
-            }
-        }
 
     val launchCamera: () -> Unit = {
-//        val uri = getRandomUri(context, ".jpg", "Cherie")
-
         val photoURI: Uri? = context?.let {
             createImageFile().let { it1 ->
 
@@ -180,12 +161,27 @@ fun InferenceScreen(navController: NavController) {
             val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             intent.putExtra(MediaStore.EXTRA_OUTPUT, it)
-            startForResultToLoadImage.launch(intent)
+            takePicture.launch(intent)
         }
     }
 
     val loadFromGallery: () -> Unit = {
         selectImageLauncher.launch("image/*")
+    }
+
+    val dismissDialog: () -> Unit = {
+        bitmap.value = null
+    }
+    val proceedToPredictionScreen: () -> Unit = {
+
+        val stream = ByteArrayOutputStream()
+        bitmap.value?.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+        val imgAsByteArray: ByteArray = stream.toByteArray()
+
+        val intent = PredictionActivity.newIntent(context, imgAsByteArray)
+        // Image from camera is too large and crashes the when the next line is run
+        // The Binder transaction buffer has a limited fixed size of 1Mb
+        context.startActivity(intent)
     }
 
     Column(
@@ -195,38 +191,10 @@ fun InferenceScreen(navController: NavController) {
             .background(color = MaterialTheme.colors.primary)
     ) {
         HeaderWithIcon()
-//        imageUri?.let {
-//            if (Build.VERSION.SDK_INT < 28) {
-//                bitmap.value = MediaStore.Images
-//                    .Media.getBitmap(context.contentResolver, it.value)
-//
-//            } else {
-//                val source = it.value?.let { it1 ->
-//                    ImageDecoder
-//                        .createSource(context.contentResolver, it1)
-//                }
-//                bitmap.value = source?.let { it1 -> ImageDecoder.decodeBitmap(it1) }
-//            }
-//
-//            bitmap.value?.let { btm ->
-//                Image(
-//                    bitmap = btm.asImageBitmap(),
-//                    contentDescription = null,
-//                    modifier = Modifier.size(200.dp)
-//                )
-//            }
-//        }
-        bitmap.value?.let { btm ->
-            Image(
-                bitmap = btm.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.size(200.dp)
-            )
+        RowLayout(loadFromGallery, launchCamera)
+        bitmap.value?.let {
+            FullScreenDialog(bitmap.value != null, it, dismissDialog, proceedToPredictionScreen)
         }
-        if (bitmap.value == null) {
-            RowLayout(loadFromGallery, launchCamera)
-        }
-
     }
 }
 
@@ -244,6 +212,101 @@ fun HeaderWithIcon() {
     Spacer(modifier = Modifier.height(12.dp))
     Text(text = "Cherie", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
     Spacer(modifier = Modifier.height(60.dp))
+}
+
+@Composable
+fun FullScreenDialog(showDialog:Boolean, image: Bitmap, onClose:()->Unit, onConfirm:()->Unit) {
+    if (showDialog) {
+        Dialog(onDismissRequest =  onClose ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp, 16.dp, 0.dp, 0.dp),
+                color = MaterialTheme.colors.background
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(32.dp)
+                    ){
+                        FloatingActionButton(
+                            contentColor = MaterialTheme.colors.onSurface,
+                            backgroundColor = Color.White,
+                            onClick = { onClose() }
+                        ) {
+                            Icon(Icons.Outlined.Close, "", tint = Color.Black)
+                        }
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Proceed with prediction?",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 25.sp,
+                            color = MaterialTheme.colors.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Image(
+                            bitmap = image.asImageBitmap(),
+                            contentDescription = null,
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier.fillMaxWidth().padding(start = 32.dp, end = 32.dp)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 36.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ){
+                        Button(
+                            onClick = { onClose() },
+                            modifier = Modifier
+                                .requiredWidth(160.dp)
+                                .background(MaterialTheme.colors.background)
+                                .border(1.dp, MaterialTheme.colors.primary),
+                            shape = RoundedCornerShape(0),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background ),
+                            elevation = ButtonDefaults.elevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 4.dp,
+                                disabledElevation = 0.dp
+                            )
+                        ) {
+                            Text(
+                                text = "No, Cancel",
+                                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colors.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Button(
+                            onClick = { onConfirm() },
+                            modifier = Modifier.requiredWidth(160.dp),
+                            shape = RoundedCornerShape(0),
+                            elevation = ButtonDefaults.elevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 4.dp,
+                                disabledElevation = 0.dp
+                            )
+                        ) {
+                            Text(
+                                text = "Yes, Proceed",
+                                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 

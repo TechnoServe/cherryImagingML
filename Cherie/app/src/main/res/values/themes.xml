@@ -12,6 +12,7 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor" tools:targetApi="l">@color/primaryDarkColor</item>
         <!-- Customize your theme here. -->
+        <item name="android:dialogTheme">@style/Theme.DialogFullScreen</item>
     </style>
 
     <style name="Theme.Cherie.NoActionBar">
@@ -22,4 +23,9 @@
     <style name="Theme.Cherie.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="Theme.Cherie.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <style name="Theme.DialogFullScreen" parent="@style/ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="android:windowMinWidthMajor">100%</item>
+        <item name="android:windowMinWidthMinor">100%</item>
+    </style>
 </resources>
