@@ -1,10 +1,8 @@
 package org.technoserve.cherie.ui.screens
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
@@ -37,33 +35,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
-import org.technoserve.cherie.BuildConfig
 import org.technoserve.cherie.R
 import java.io.File
 import java.io.IOException
 import android.graphics.*
 import androidx.compose.foundation.border
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.ui.focus.focusModifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
-import androidx.core.content.ContextCompat.startActivity
+import com.theartofdev.edmodo.cropper.CropImage
 import org.technoserve.cherie.PredictionActivity
-import org.technoserve.cherie.ui.navigation.NavigationItem
 import java.io.ByteArrayOutputStream
 
-fun get512Bitmap(bitmap: Bitmap, width: Int, height: Int): Bitmap {
-    var bmp = bitmap;
-    bmp = if (width >= height) {
-        Bitmap.createBitmap(bmp, width / 2 - height / 2, 0, height, height)
-    } else {
-        Bitmap.createBitmap(bmp, 0, height / 2 - width / 2, width, width)
-    }
-    bmp = Bitmap.createScaledBitmap(bmp, 512, 512, true)
-    return bmp
-}
 
 
 @Composable
@@ -71,33 +53,7 @@ fun InferenceScreen(navController: NavController) {
     var imageUri = remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
-    val currentPhotoPath = remember { mutableStateOf<String>("") }
-
-
-    val selectImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if(uri != null){
-            imageUri.value = uri
-            if (Build.VERSION.SDK_INT < 28) {
-                bitmap.value = MediaStore.Images
-                    .Media.getBitmap(context.contentResolver, uri)
-
-            } else {
-                val source = uri?.let {
-                    ImageDecoder
-                        .createSource(context.contentResolver, it)
-                }
-                bitmap.value = source?.let { it1 -> ImageDecoder.decodeBitmap(it1) }
-            }
-
-            val bitmapWidth = bitmap.value?.width!!
-            val bitmapHeight = bitmap.value?.height!!
-            var bmp = bitmap.value!!
-            // TODO: Resize to 512 x 512
-            bitmap.value = get512Bitmap(bmp, bitmapWidth, bitmapHeight)
-        }
-    }
+    val currentPhotoPath = remember { mutableStateOf("") }
 
     @Throws(IOException::class)
     fun createImageFile(): File {
@@ -114,45 +70,57 @@ fun InferenceScreen(navController: NavController) {
         }
     }
 
+    val cropPicture =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                try {
+                    val cropResult = CropImage.getActivityResult(result.data)
+                    val croppedImage: Uri = cropResult.uri
+                    bitmap.value = BitmapFactory.decodeStream(imageUri.value?.let { context?.contentResolver?.openInputStream(croppedImage) })
+                } catch (error: Exception) {
+                    Log.d("CHERIE@CROP", "Error : ${error.localizedMessage}")
+                }
+            }
+        }
+
+    val launchCropActivity: () -> Unit = {
+        val intent = CropImage.activity(imageUri.value)
+            .setAspectRatio(1, 1)
+            .setFixAspectRatio(true)
+            .setActivityTitle("Resize Image")
+            .setRequestedSize(512, 512)
+            .setOutputCompressQuality(80)
+            .getIntent(context)
+        cropPicture.launch(intent)
+    }
+
+    val selectImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            imageUri.value = uri
+            launchCropActivity()
+        }
+    }
+
+    val loadFromGallery: () -> Unit = {
+        selectImageLauncher.launch("image/*")
+    }
 
     val takePicture =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
                 try {
-                    val selectedImage: Uri? = result.data?.data
-                    if (selectedImage != null) {
-                        // From Gallery
-                    } else {
-                        // From Camera
-                        val bmp = BitmapFactory.decodeStream(imageUri.value?.let {
-                            context?.contentResolver?.openInputStream(
-                                it
-                            )
-                        })
-
-                        val matrix = Matrix()
-                        matrix.postRotate(90.0f)
-                        bitmap.value = Bitmap.createBitmap(
-                            bmp,
-                            0,
-                            0,
-                            bmp.width,
-                            bmp.height,
-                            matrix,
-                            true
-                        )
-                    }
+                    launchCropActivity()
                 } catch (error: Exception) {
-                    Log.d("TAG==>>", "Error : ${error.localizedMessage}")
+                    Log.d("CHERIE@CAMERA", "Error : ${error.localizedMessage}")
                 }
             }
         }
 
-
     val launchCamera: () -> Unit = {
         val photoURI: Uri? = context?.let {
             createImageFile().let { it1 ->
-
                 FileProvider.getUriForFile(
                     it,
                     context.applicationContext.packageName.toString() + ".provider",
@@ -170,32 +138,25 @@ fun InferenceScreen(navController: NavController) {
         }
     }
 
-    val loadFromGallery: () -> Unit = {
-        selectImageLauncher.launch("image/*")
+    val dismissDialog: () -> Unit = {
+        // Wipe state
+        imageUri.value = null
+        bitmap.value = null
+        currentPhotoPath.value = ""
     }
 
-    val dismissDialog: () -> Unit = {
-        bitmap.value = null
-    }
     val proceedToPredictionScreen: () -> Unit = {
 
         val stream = ByteArrayOutputStream()
         bitmap.value?.compress(Bitmap.CompressFormat.JPEG, 100, stream)
         val imgAsByteArray: ByteArray = stream.toByteArray()
 
-        // Wipe state
-        imageUri.value = null
-        bitmap.value = null
-        currentPhotoPath.value = ""
-
-        val startTime = System.nanoTime()
-
         val intent = PredictionActivity.newIntent(context, imgAsByteArray)
-        Log.d("Intent creation", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
         // Image from camera is too large and crashes the when the next line is run
         // The Binder transaction buffer has a limited fixed size of 1Mb
         context.startActivity(intent)
-        Log.d("Activity Move", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+
+        dismissDialog()
     }
 
     Column(
@@ -204,7 +165,7 @@ fun InferenceScreen(navController: NavController) {
             .fillMaxWidth()
             .background(color = MaterialTheme.colors.primary)
     ) {
-        HeaderWithIcon(navController)
+        HeaderWithIcon()
         RowLayout(loadFromGallery, launchCamera)
         bitmap.value?.let {
             FullScreenDialog(bitmap.value != null, it, dismissDialog, proceedToPredictionScreen)
@@ -212,35 +173,12 @@ fun InferenceScreen(navController: NavController) {
     }
 }
 
-
 @Composable
-fun HeaderWithIcon(navController: NavController) {
+fun HeaderWithIcon() {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxWidth(),
     ) {
-
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(32.dp)
-        ) {
-            FloatingActionButton(
-                contentColor = MaterialTheme.colors.primary,
-                backgroundColor = Color.White,
-                onClick = {
-                    navController.navigate(NavigationItem.Profile.route)
-                },
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 4.dp
-                ),
-                modifier = Modifier.size(48.dp, 48.dp)
-            ) {
-                Icon(Icons.Outlined.Person, "", tint = MaterialTheme.colors.primaryVariant)
-            }
-        }
-
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -429,45 +367,5 @@ fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
             }
 
         }
-    }
-}
-
-@Composable
-fun ColumnLayout() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp))
-            .background(color = MaterialTheme.colors.background)
-            .padding(top = 80.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        val haptic = LocalHapticFeedback.current
-        FloatingActionButton(
-            contentColor = MaterialTheme.colors.onSurface,
-            backgroundColor = Color.White,
-            onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            }
-        ) {
-            Icon(Icons.Outlined.PhotoCamera, "", tint = MaterialTheme.colors.primary)
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "Take picture", color = MaterialTheme.colors.onSurface)
-
-        Spacer(modifier = Modifier.height(42.dp))
-
-        FloatingActionButton(
-            contentColor = MaterialTheme.colors.onSurface,
-            backgroundColor = Color.White,
-            onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            }
-        ) {
-            Icon(Icons.Outlined.Image, "", tint = Color.Blue)
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "Load from gallery", color = MaterialTheme.colors.onSurface)
     }
 }

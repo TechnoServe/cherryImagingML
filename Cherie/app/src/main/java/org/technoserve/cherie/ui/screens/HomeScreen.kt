@@ -14,7 +14,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavHostController
 import org.technoserve.cherie.ui.navigation.NavigationItem
 
-enum class HomeNavType { INFERENCE, LOGS }
+enum class HomeNavType { INFERENCE, LOGS, PROFILE }
 
 @Composable
 fun HomeScreen(navController: NavHostController) {
@@ -36,6 +36,7 @@ fun HomeBodyContent(homeNavType: HomeNavType, navController: NavHostController) 
         when (navType) {
             HomeNavType.INFERENCE -> InferenceScreen(navController)
             HomeNavType.LOGS -> SavedPredictionsScreen(navController)
+            HomeNavType.PROFILE -> ProfileScreen(navController)
         }
     }
 }
@@ -64,6 +65,15 @@ fun HomeBottomNavigation(homeNavItemState: MutableState<HomeNavType>) {
             alwaysShowLabel = true,
             selected = homeNavItemState.value == HomeNavType.LOGS,
             onClick = { homeNavItemState.value = HomeNavType.LOGS },
+        )
+        BottomNavigationItem(
+            icon = { Icon(painterResource(id = NavigationItem.Profile.icon), contentDescription = NavigationItem.Profile.title) },
+            label = { Text(text = NavigationItem.Profile.title) },
+            selectedContentColor = Color.White,
+            unselectedContentColor = Color.White.copy(0.4f),
+            alwaysShowLabel = true,
+            selected = homeNavItemState.value == HomeNavType.PROFILE,
+            onClick = { homeNavItemState.value = HomeNavType.PROFILE },
         )
     }
 }

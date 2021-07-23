@@ -18,30 +18,19 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
 @Composable
-fun ProfileScreen(navController: NavController) {
+fun PermissionsSreen() {
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Profile",
+                        text = "Special Permissions Required",
                         color = Color.White,
                         fontSize = 18.sp,
                     )
                 },
                 backgroundColor = MaterialTheme.colors.primary,
-                contentColor = Color.Black,
-//                navigationIcon = {
-//                    IconButton(onClick = { navController.popBackStack() }) {
-//                        Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = null, tint = Color.White)
-//                    }
-//                },
-//                actions = {
-//                    IconButton(onClick = {}) {
-//                        Icon(imageVector = Icons.Outlined.Share, contentDescription = null, tint = Color.White)
-//                    }
-//                }
             )
         }
     ) {
@@ -52,7 +41,7 @@ fun ProfileScreen(navController: NavController) {
                 .wrapContentSize(Alignment.Center)
         ) {
             Text(
-                text = "Profile",
+                text = "Grant App Permissions",
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colors.onSurface,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
