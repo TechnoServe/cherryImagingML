@@ -22,12 +22,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-import java.io.IOException
 import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 
 import android.os.SystemClock
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import org.pytorch.IValue
@@ -37,23 +37,18 @@ import org.technoserve.cherie.Pix2PixModule
 
 @Composable
 fun PredictionScreen(imageAsByteArray: ByteArray) {
-
     val bitmap: Bitmap = BitmapFactory.decodeByteArray(imageAsByteArray, 0, imageAsByteArray.size)
     var mask: Bitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
     val context = LocalContext.current
     val complete = remember { mutableStateOf(false) }
 
-    val startTime = System.nanoTime()
-    try {
-        if(Pix2PixModule.mModule == null){
-            Pix2PixModule.loadModel(context)
-        }
-    } catch (e: IOException) {
-        Log.e("Cherie", "Error reading assets", e)
+    fun calculateRipenessScores(): FloatArray {
+        var scores = floatArrayOf(90.0f, 5.0f, 5.0f)
+        // TODO: get ripeness score from mask
+        return scores
     }
-    Log.d("Load Model", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
 
-    fun runModel(): Unit{
+    fun runModel(){
         val NORM_MEAN_RGB = floatArrayOf(0.5f, 0.5f, 0.5f)
         val NORM_STD_RGB = floatArrayOf(0.5f, 0.5f, 0.5f)
         val inputTensor = TensorImageUtils.bitmapToFloat32Tensor(
@@ -97,11 +92,17 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
         }
         mask.setPixels(pixels, 0, width, 0, 0, width, height)
         complete.value = true
+        calculateRipenessScores()
     }
 
+    LaunchedEffect(imageAsByteArray) {
+        val startTime = System.nanoTime()
+        Pix2PixModule.loadModel(context)
+        Log.d("Model Task", "Loading model took: " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+        runModel()
+        Log.d("Model Task", "Running inference took: " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+    }
 
-    runModel()
-    Log.d("Run Model", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
 
     val onRetry = {
         runModel()
