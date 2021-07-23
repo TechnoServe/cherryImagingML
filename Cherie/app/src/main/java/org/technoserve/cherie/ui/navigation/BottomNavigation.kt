@@ -11,8 +11,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 @Composable
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
-        NavigationItem.Home,
+        NavigationItem.Inference,
         NavigationItem.Logs,
+        NavigationItem.Profile
     )
     BottomNavigation(
         backgroundColor = MaterialTheme.colors.primary,

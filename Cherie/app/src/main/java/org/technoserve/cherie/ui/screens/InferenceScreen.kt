@@ -34,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import androidx.navigation.NavController
 import org.technoserve.cherie.R
 import java.io.File
 import java.io.IOException
@@ -42,14 +41,15 @@ import android.graphics.*
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.ui.window.Dialog
-import com.theartofdev.edmodo.cropper.CropImage
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageView
+import com.canhub.cropper.options
 import org.technoserve.cherie.PredictionActivity
 import java.io.ByteArrayOutputStream
 
 
-
 @Composable
-fun InferenceScreen(navController: NavController) {
+fun InferenceScreen() {
     var imageUri = remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
@@ -70,28 +70,31 @@ fun InferenceScreen(navController: NavController) {
         }
     }
 
-    val cropPicture =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                try {
-                    val cropResult = CropImage.getActivityResult(result.data)
-                    val croppedImage: Uri = cropResult.uri
-                    bitmap.value = BitmapFactory.decodeStream(imageUri.value?.let { context?.contentResolver?.openInputStream(croppedImage) })
-                } catch (error: Exception) {
-                    Log.d("CHERIE@CROP", "Error : ${error.localizedMessage}")
-                }
-            }
+    val cropImage = rememberLauncherForActivityResult(CropImageContract()) { result ->
+        if (result.isSuccessful) {
+            val uriContent: Uri? = result.uriContent
+            bitmap.value = BitmapFactory.decodeStream(imageUri.value?.let {
+                uriContent?.let { it1 -> context?.contentResolver?.openInputStream(it1) }
+            })
+        } else {
+            val exception = result.error
+            Log.d("CHERIE@CROP", "Error : ${exception?.localizedMessage}")
         }
+    }
 
-    val launchCropActivity: () -> Unit = {
-        val intent = CropImage.activity(imageUri.value)
-            .setAspectRatio(1, 1)
-            .setFixAspectRatio(true)
-            .setActivityTitle("Resize Image")
-            .setRequestedSize(512, 512)
-            .setOutputCompressQuality(80)
-            .getIntent(context)
-        cropPicture.launch(intent)
+    fun startCrop() {
+        cropImage.launch(
+            options(uri = imageUri.value) {
+                setGuidelines(CropImageView.Guidelines.ON)
+                setFixAspectRatio(true)
+                setAspectRatio(1, 1)
+                setInitialCropWindowPaddingRatio(0f)
+                setActivityTitle("Resize Image")
+                setRequestedSize(512, 512)
+                setOutputCompressQuality(80)
+                setOutputCompressFormat(Bitmap.CompressFormat.JPEG)
+            }
+        )
     }
 
     val selectImageLauncher = rememberLauncherForActivityResult(
@@ -99,7 +102,7 @@ fun InferenceScreen(navController: NavController) {
     ) { uri: Uri? ->
         if (uri != null) {
             imageUri.value = uri
-            launchCropActivity()
+            startCrop()
         }
     }
 
@@ -111,7 +114,7 @@ fun InferenceScreen(navController: NavController) {
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
                 try {
-                    launchCropActivity()
+                    startCrop()
                 } catch (error: Exception) {
                     Log.d("CHERIE@CAMERA", "Error : ${error.localizedMessage}")
                 }
@@ -133,6 +136,7 @@ fun InferenceScreen(navController: NavController) {
 
             val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            intent.putExtra("android.intent.extra.quickCapture", true)
             intent.putExtra(MediaStore.EXTRA_OUTPUT, it)
             takePicture.launch(intent)
         }

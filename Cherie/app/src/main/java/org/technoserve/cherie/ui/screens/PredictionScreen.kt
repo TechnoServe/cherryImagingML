@@ -1,7 +1,6 @@
 package org.technoserve.cherie.ui.screens
 
 import android.app.Activity
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color.rgb
@@ -22,52 +21,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import java.io.FileOutputStream
-
-import java.io.File
 
 import java.io.IOException
 import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 
 import android.os.SystemClock
-import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import org.pytorch.LiteModuleLoader
-import org.pytorch.Module
 import org.pytorch.IValue
 import org.pytorch.torchvision.TensorImageUtils
+import org.technoserve.cherie.Pix2PixModule
 
-
-
-
-
-@Throws(IOException::class)
-fun assetFilePath(context: Context, assetName: String): String? {
-    val file = File(context.filesDir, assetName)
-    if (file.exists() && file.length() > 0) {
-        return file.absolutePath
-    }
-    context.assets.open(assetName).use { `is` ->
-        FileOutputStream(file).use { os ->
-            val buffer = ByteArray(4 * 1024)
-            var read: Int
-            while (`is`.read(buffer).also { read = it } != -1) {
-                os.write(buffer, 0, read)
-            }
-            os.flush()
-        }
-        return file.absolutePath
-    }
-}
 
 @Composable
 fun PredictionScreen(imageAsByteArray: ByteArray) {
-
-    var mModule: Module? = null;
 
     val bitmap: Bitmap = BitmapFactory.decodeByteArray(imageAsByteArray, 0, imageAsByteArray.size)
     var mask: Bitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
@@ -76,7 +45,9 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
 
     val startTime = System.nanoTime()
     try {
-        mModule = LiteModuleLoader.load(assetFilePath(context, "pix2pix_benchmark.ptl"))
+        if(Pix2PixModule.mModule == null){
+            Pix2PixModule.loadModel(context)
+        }
     } catch (e: IOException) {
         Log.e("Cherie", "Error reading assets", e)
     }
@@ -91,7 +62,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
         )
 
         val startTime = SystemClock.elapsedRealtime()
-        val outputTensor = mModule!!.forward(IValue.from(inputTensor)).toTensor()
+        val outputTensor = Pix2PixModule.mModule!!.forward(IValue.from(inputTensor)).toTensor()
         val inferenceTime = SystemClock.elapsedRealtime() - startTime
         Log.d("ImageSegmentation", "inference time (ms): $inferenceTime")
 

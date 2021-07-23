@@ -64,26 +64,12 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     ) {
-                        AppRoot()
+                        HomeScreen()
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-fun AppRoot() {
-    val navController = rememberNavController()
-    NavHost(
-        navController = navController,
-        startDestination = NavigationItem.Home.route
-    ) {
-        composable(NavigationItem.Home.route) {
-            HomeScreen(navController = navController)
-        }
-    }
-
 }
 
 
