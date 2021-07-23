@@ -49,7 +49,7 @@ import java.io.ByteArrayOutputStream
 
 
 @Composable
-fun InferenceScreen(navController: NavController) {
+fun InferenceScreen() {
     var imageUri = remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
@@ -133,6 +133,7 @@ fun InferenceScreen(navController: NavController) {
 
             val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            intent.putExtra("android.intent.extra.quickCapture", true)
             intent.putExtra(MediaStore.EXTRA_OUTPUT, it)
             takePicture.launch(intent)
         }
