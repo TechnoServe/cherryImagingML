@@ -25,23 +25,23 @@ fun ProfileScreen(navController: NavController) {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Profile Screen",
+                        text = "Profile",
                         color = Color.White,
                         fontSize = 18.sp,
                     )
                 },
                 backgroundColor = MaterialTheme.colors.primary,
                 contentColor = Color.Black,
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = null, tint = Color.White)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(imageVector = Icons.Outlined.Share, contentDescription = null, tint = Color.White)
-                    }
-                }
+//                navigationIcon = {
+//                    IconButton(onClick = { navController.popBackStack() }) {
+//                        Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = null, tint = Color.White)
+//                    }
+//                },
+//                actions = {
+//                    IconButton(onClick = {}) {
+//                        Icon(imageVector = Icons.Outlined.Share, contentDescription = null, tint = Color.White)
+//                    }
+//                }
             )
         }
     ) {
@@ -52,7 +52,7 @@ fun ProfileScreen(navController: NavController) {
                 .wrapContentSize(Alignment.Center)
         ) {
             Text(
-                text = "Profile View",
+                text = "Profile",
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colors.onSurface,
                 modifier = Modifier.align(Alignment.CenterHorizontally),

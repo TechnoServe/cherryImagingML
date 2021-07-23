@@ -82,10 +82,6 @@ fun AppRoot() {
         composable(NavigationItem.Home.route) {
             HomeScreen(navController = navController)
         }
-
-        composable(NavigationItem.Profile.route) {
-            ProfileScreen(navController = navController)
-        }
     }
 
 }
