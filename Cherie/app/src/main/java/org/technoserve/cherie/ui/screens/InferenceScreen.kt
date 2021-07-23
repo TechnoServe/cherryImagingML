@@ -47,7 +47,6 @@ import org.technoserve.cherie.PredictionActivity
 import java.io.ByteArrayOutputStream
 
 
-
 @Composable
 fun InferenceScreen() {
     var imageUri = remember { mutableStateOf<Uri?>(null) }
@@ -76,7 +75,9 @@ fun InferenceScreen() {
                 try {
                     val cropResult = CropImage.getActivityResult(result.data)
                     val croppedImage: Uri = cropResult.uri
-                    bitmap.value = BitmapFactory.decodeStream(imageUri.value?.let { context?.contentResolver?.openInputStream(croppedImage) })
+                    bitmap.value = BitmapFactory.decodeStream(imageUri.value?.let {
+                        context?.contentResolver?.openInputStream(croppedImage)
+                    })
                 } catch (error: Exception) {
                     Log.d("CHERIE@CROP", "Error : ${error.localizedMessage}")
                 }

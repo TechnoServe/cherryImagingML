@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
 @Composable
-fun SavedPredictionsScreen(navController: NavController) {
+fun SavedPredictionsScreen() {
 
     Scaffold(
         topBar = {

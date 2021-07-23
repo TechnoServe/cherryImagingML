@@ -17,26 +17,26 @@ import org.technoserve.cherie.ui.navigation.NavigationItem
 enum class HomeNavType { INFERENCE, LOGS, PROFILE }
 
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen() {
     val navItemState = rememberSaveable { mutableStateOf(HomeNavType.INFERENCE) }
     Scaffold(
         modifier = Modifier.fillMaxWidth(),
-        content = { HomeBodyContent(homeNavType = navItemState.value, navController = navController) },
+        content = { HomeBodyContent(homeNavType = navItemState.value) },
         bottomBar = { HomeBottomNavigation(navItemState) },
     )
 }
 
 @Composable
-fun HomeBodyContent(homeNavType: HomeNavType, navController: NavHostController) {
+fun HomeBodyContent(homeNavType: HomeNavType) {
     Crossfade(
         targetState = homeNavType,
         animationSpec = tween(240),
         modifier = Modifier.fillMaxWidth(),
     ) { navType ->
         when (navType) {
-            HomeNavType.INFERENCE -> InferenceScreen(navController)
-            HomeNavType.LOGS -> SavedPredictionsScreen(navController)
-            HomeNavType.PROFILE -> ProfileScreen(navController)
+            HomeNavType.INFERENCE -> InferenceScreen()
+            HomeNavType.LOGS -> SavedPredictionsScreen()
+            HomeNavType.PROFILE -> ProfileScreen()
         }
     }
 }
@@ -49,7 +49,12 @@ fun HomeBottomNavigation(homeNavItemState: MutableState<HomeNavType>) {
         contentColor = MaterialTheme.colors.onSurface,
     ) {
         BottomNavigationItem(
-            icon = { Icon(painterResource(id = NavigationItem.Inference.icon), contentDescription = NavigationItem.Inference.title) },
+            icon = {
+                Icon(
+                    painterResource(id = NavigationItem.Inference.icon),
+                    contentDescription = NavigationItem.Inference.title
+                )
+            },
             label = { Text(text = NavigationItem.Inference.title) },
             selectedContentColor = Color.White,
             unselectedContentColor = Color.White.copy(0.4f),
@@ -58,7 +63,12 @@ fun HomeBottomNavigation(homeNavItemState: MutableState<HomeNavType>) {
             onClick = { homeNavItemState.value = HomeNavType.INFERENCE },
         )
         BottomNavigationItem(
-            icon = { Icon(painterResource(id = NavigationItem.Logs.icon), contentDescription = NavigationItem.Logs.title) },
+            icon = {
+                Icon(
+                    painterResource(id = NavigationItem.Logs.icon),
+                    contentDescription = NavigationItem.Logs.title
+                )
+            },
             label = { Text(text = NavigationItem.Logs.title) },
             selectedContentColor = Color.White,
             unselectedContentColor = Color.White.copy(0.4f),
@@ -67,7 +77,12 @@ fun HomeBottomNavigation(homeNavItemState: MutableState<HomeNavType>) {
             onClick = { homeNavItemState.value = HomeNavType.LOGS },
         )
         BottomNavigationItem(
-            icon = { Icon(painterResource(id = NavigationItem.Profile.icon), contentDescription = NavigationItem.Profile.title) },
+            icon = {
+                Icon(
+                    painterResource(id = NavigationItem.Profile.icon),
+                    contentDescription = NavigationItem.Profile.title
+                )
+            },
             label = { Text(text = NavigationItem.Profile.title) },
             selectedContentColor = Color.White,
             unselectedContentColor = Color.White.copy(0.4f),

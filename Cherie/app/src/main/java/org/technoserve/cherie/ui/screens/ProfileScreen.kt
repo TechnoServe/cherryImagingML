@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
 @Composable
-fun ProfileScreen(navController: NavController) {
+fun ProfileScreen() {
 
     Scaffold(
         topBar = {
@@ -32,16 +32,6 @@ fun ProfileScreen(navController: NavController) {
                 },
                 backgroundColor = MaterialTheme.colors.primary,
                 contentColor = Color.Black,
-//                navigationIcon = {
-//                    IconButton(onClick = { navController.popBackStack() }) {
-//                        Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = null, tint = Color.White)
-//                    }
-//                },
-//                actions = {
-//                    IconButton(onClick = {}) {
-//                        Icon(imageVector = Icons.Outlined.Share, contentDescription = null, tint = Color.White)
-//                    }
-//                }
             )
         }
     ) {
