@@ -42,6 +42,7 @@ import org.technoserve.cherie.R
 import java.io.File
 import java.io.IOException
 import android.graphics.*
+import android.provider.Settings
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Close
@@ -73,11 +74,18 @@ fun InferenceScreen(navController: NavController) {
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
     val currentPhotoPath = remember { mutableStateOf<String>("") }
 
+    val navigateToSettingsScreen = {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", context.packageName, null)
+        )
+        context.startActivity(intent)
+    }
 
     val selectImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if(uri != null){
+        if (uri != null) {
             imageUri.value = uri
             if (Build.VERSION.SDK_INT < 28) {
                 bitmap.value = MediaStore.Images
@@ -191,11 +199,17 @@ fun InferenceScreen(navController: NavController) {
         val startTime = System.nanoTime()
 
         val intent = PredictionActivity.newIntent(context, imgAsByteArray)
-        Log.d("Intent creation", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+        Log.d(
+            "Intent creation",
+            "TASK took : " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
+        )
         // Image from camera is too large and crashes the when the next line is run
         // The Binder transaction buffer has a limited fixed size of 1Mb
         context.startActivity(intent)
-        Log.d("Activity Move", "TASK took : " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+        Log.d(
+            "Activity Move",
+            "TASK took : " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
+        )
     }
 
     Column(
