@@ -1,6 +1,7 @@
 package org.technoserve.cherie
 
 import android.content.Context
+import android.util.Log
 import org.pytorch.LiteModuleLoader
 import org.pytorch.Module
 import java.io.File
@@ -32,7 +33,13 @@ object Pix2PixModule {
     var mModule: Module? = null
 
     fun loadModel(context: Context) {
-        mModule = LiteModuleLoader.load(assetFilePath(context, "pix2pix_benchmark.ptl"))
+        if(mModule == null){
+            try {
+                mModule = LiteModuleLoader.load(assetFilePath(context, "pix2pix_benchmark.ptl"))
+            } catch (e: IOException) {
+                Log.e("Cherie", "Error reading assets", e)
+            }
+        }
     }
 
 }
