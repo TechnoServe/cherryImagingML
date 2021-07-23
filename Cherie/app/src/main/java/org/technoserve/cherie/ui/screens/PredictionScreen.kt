@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-import java.io.IOException
 import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 
@@ -45,7 +44,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
 
     fun calculateRipenessScores(): FloatArray {
         var scores = floatArrayOf(90.0f, 5.0f, 5.0f)
-
+        // TODO: get ripeness score from mask
         return scores
     }
 
