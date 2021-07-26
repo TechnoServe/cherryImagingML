@@ -37,7 +37,9 @@
             android:name=".PredictionActivity"
             android:label="Prediction"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.Cherie.NoActionBar"></activity>
+            android:theme="@style/Theme.Cherie.NoActionBar">
+
+        </activity>
 
         <provider
             android:name="androidx.core.content.FileProvider"

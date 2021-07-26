@@ -1,21 +1,23 @@
 package org.technoserve.cherie.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.outlined.Delete
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.technoserve.cherie.database.Prediction
+import org.technoserve.cherie.database.PredictionViewModel
 
 @Composable
-fun SavedPredictionsScreen() {
+fun SavedPredictionsScreen(predictionViewModel: PredictionViewModel = viewModel()) {
 
     Scaffold(
         topBar = {
@@ -38,14 +40,27 @@ fun SavedPredictionsScreen() {
                 .background(MaterialTheme.colors.background)
                 .wrapContentSize(Alignment.Center)
         ) {
-            Text(
-                text = "Saved predictions",
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.onSurface,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                textAlign = TextAlign.Center,
-                fontSize = 25.sp
-            )
+            ShowPrediction(predictionViewModel.predictions) {
+                predictionViewModel.removePrediction(it)
+            }
+
         }
     }
 }
+
+@Composable
+fun ShowPrediction(preditems: List<Prediction>,
+                   onNodeRemoved: (Prediction) -> Unit) {
+    LazyColumn() {
+            items(preditems) { item ->
+                Row{
+                    PredictionCard(prediction = item)
+                    IconButton(onClick = { onNodeRemoved(item) }) {
+                        Icon(imageVector = Icons.Outlined.Delete, contentDescription = null)
+                    }
+                }
+
+            }
+    }
+}
+

@@ -177,6 +177,8 @@ fun InferenceScreen() {
     }
 }
 
+
+
 @Composable
 fun HeaderWithIcon() {
     Box(

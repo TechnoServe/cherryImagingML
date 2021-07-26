@@ -30,9 +30,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.pytorch.IValue
 import org.pytorch.torchvision.TensorImageUtils
 import org.technoserve.cherie.Pix2PixModule
+import org.technoserve.cherie.database.PredictionViewModel
 
 
 @Composable
@@ -128,6 +131,8 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                     .width(256.dp)
                     .padding(start = 32.dp, end = 32.dp)
             )
+
+
             Spacer(modifier = Modifier.height(32.dp))
 
             if(complete.value){
@@ -139,6 +144,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                         .width(256.dp)
                         .padding(start = 32.dp, end = 32.dp)
                 )
+                AddPrediction(image = mask.asImageBitmap(), content = "None yet")
             }
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -196,4 +202,10 @@ fun Nav(onRetry: () -> Unit){
             }
         }
     )
+}
+
+@Composable
+fun AddPrediction(image: ImageBitmap, content: String, predictionViewModel: PredictionViewModel = viewModel()){
+    predictionViewModel.addPrediction(content, image)
+
 }
