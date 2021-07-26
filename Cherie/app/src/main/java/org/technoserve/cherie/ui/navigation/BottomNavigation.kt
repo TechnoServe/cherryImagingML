@@ -25,7 +25,6 @@ fun BottomNavigationBar(navController: NavController) {
         items.forEach { item ->
             BottomNavigationItem(
                 icon = { Icon(painterResource(id = item.icon), contentDescription = item.title) },
-//                label = { Text(text = item.title) },
                 label = { Text(item.title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis) /* optional */
