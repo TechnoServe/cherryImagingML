@@ -75,7 +75,7 @@ fun nearestPixel(col1: IntArray): Int{
 @Composable
 fun PredictionScreen(imageAsByteArray: ByteArray) {
     val bitmap: Bitmap = BitmapFactory.decodeByteArray(imageAsByteArray, 0, imageAsByteArray.size)
-    var mask: Bitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+    val mask: Bitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
     val context = LocalContext.current
     val complete = remember { mutableStateOf(false) }
     val predictionViewModel: PredictionViewModel = viewModel(
@@ -156,7 +156,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     }
 
     fun calculateRipenessScore(): Float {
-        return (redCount / (redCount + greenCount + blueCount)) as Float * 100
+        return ((redCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
     }
 
     Scaffold(
@@ -241,7 +241,7 @@ fun Nav(onRetry: () -> Unit) {
         backgroundColor = MaterialTheme.colors.primary,
         contentColor = Color.Black,
         navigationIcon = {
-            IconButton(onClick = { context?.finish() }) {
+            IconButton(onClick = { context.finish() }) {
                 Icon(
                     imageVector = Icons.Outlined.ArrowBack,
                     contentDescription = null,
