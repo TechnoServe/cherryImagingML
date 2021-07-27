@@ -56,6 +56,10 @@ val refColors: Array<IntArray> = arrayOf(
     intArrayOf(255, 255, 255),    // white
 )
 
+enum class ScoreType {
+    RIPE, UNDERRIPE, OVERRIPE
+}
+
 fun nearestPixel(col1: IntArray): Int{
     var idxClosest = 0
     var minDistance = distance(col1, refColors[idxClosest])
@@ -155,8 +159,12 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
         runModel()
     }
 
-    fun calculateRipenessScore(): Float {
-        return ((redCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+    fun calculateRipenessScore(scoreType: ScoreType = ScoreType.RIPE): Float {
+        when(scoreType) {
+            ScoreType.RIPE -> return ((redCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+            ScoreType.UNDERRIPE -> return ((greenCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+            ScoreType.OVERRIPE -> return ((blueCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+        }
     }
 
     Scaffold(
@@ -206,7 +214,14 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
 
             Button(
                 onClick = {
-                    addPrediction(predictionViewModel, bitmap, mask)
+                    addPrediction(
+                        predictionViewModel,
+                        bitmap,
+                        mask,
+                        calculateRipenessScore(ScoreType.RIPE),
+                        calculateRipenessScore(ScoreType.UNDERRIPE),
+                        calculateRipenessScore(ScoreType.OVERRIPE),
+                    )
                 },
                 modifier = Modifier.requiredWidth(160.dp),
                 shape = RoundedCornerShape(0),
@@ -264,16 +279,19 @@ fun Nav(onRetry: () -> Unit) {
 fun addPrediction(
     predictionViewModel: PredictionViewModel,
     inputImage: Bitmap,
-    mask: Bitmap
+    mask: Bitmap,
+    ripe: Float,
+    underripe: Float,
+    overripe: Float
 ) {
     val prediction = Prediction(
         inputImage,
         mask,
-        "90%",
-        "90%",
-        "90%",
-        false,
-        Calendar.getInstance().timeInMillis
+        ripe = "${String.format("%.2f", ripe)}%",
+        overripe = "${String.format("%.2f", overripe)}%",
+        underripe = "${String.format("%.2f", underripe)}%",
+        synced =false,
+        createdAt = Calendar.getInstance().timeInMillis
     )
     predictionViewModel.addPrediction(prediction)
 
