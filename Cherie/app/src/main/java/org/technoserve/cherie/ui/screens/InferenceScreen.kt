@@ -177,6 +177,8 @@ fun InferenceScreen() {
     }
 }
 
+
+
 @Composable
 fun HeaderWithIcon() {
     Box(
@@ -205,6 +207,8 @@ fun HeaderWithIcon() {
         }
     }
 }
+
+
 
 @Composable
 fun FullScreenDialog(

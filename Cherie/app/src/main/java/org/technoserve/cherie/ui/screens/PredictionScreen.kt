@@ -1,6 +1,7 @@
 package org.technoserve.cherie.ui.screens
 
 import android.app.Activity
+import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color.rgb
@@ -30,9 +31,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.pytorch.IValue
 import org.pytorch.torchvision.TensorImageUtils
 import org.technoserve.cherie.Pix2PixModule
+import org.technoserve.cherie.database.Prediction
+import org.technoserve.cherie.database.PredictionViewModel
+import org.technoserve.cherie.database.PredictionViewModelFactory
+import java.util.Calendar
 
 
 @Composable
@@ -41,6 +47,9 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     var mask: Bitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
     val context = LocalContext.current
     val complete = remember { mutableStateOf(false) }
+    val predictionViewModel: PredictionViewModel = viewModel(
+        factory = PredictionViewModelFactory(context.applicationContext as Application)
+    )
 
     fun calculateRipenessScores(): FloatArray {
         var scores = floatArrayOf(90.0f, 5.0f, 5.0f)
@@ -48,7 +57,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
         return scores
     }
 
-    fun runModel(){
+    fun runModel() {
         val NORM_MEAN_RGB = floatArrayOf(0.5f, 0.5f, 0.5f)
         val NORM_STD_RGB = floatArrayOf(0.5f, 0.5f, 0.5f)
         val inputTensor = TensorImageUtils.bitmapToFloat32Tensor(
@@ -98,9 +107,15 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     LaunchedEffect(imageAsByteArray) {
         val startTime = System.nanoTime()
         Pix2PixModule.loadModel(context)
-        Log.d("Model Task", "Loading model took: " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+        Log.d(
+            "Model Task",
+            "Loading model took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
+        )
         runModel()
-        Log.d("Model Task", "Running inference took: " +  ((System.nanoTime()-startTime)/1000000)+ "mS\n")
+        Log.d(
+            "Model Task",
+            "Running inference took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
+        )
     }
 
 
@@ -109,7 +124,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     }
 
     Scaffold(
-        topBar = { Nav(onRetry = onRetry ) }
+        topBar = { Nav(onRetry = onRetry) }
     ) {
         Column(
             modifier = Modifier
@@ -128,9 +143,11 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                     .width(256.dp)
                     .padding(start = 32.dp, end = 32.dp)
             )
+
+
             Spacer(modifier = Modifier.height(32.dp))
 
-            if(complete.value){
+            if (complete.value) {
                 Image(
                     bitmap = mask.asImageBitmap(),
                     contentDescription = "Mask",
@@ -152,7 +169,9 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { /* TODO */ },
+                onClick = {
+                    addPrediction(predictionViewModel, bitmap, mask)
+                },
                 modifier = Modifier.requiredWidth(160.dp),
                 shape = RoundedCornerShape(0),
                 elevation = ButtonDefaults.elevation(
@@ -173,7 +192,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
 }
 
 @Composable
-fun Nav(onRetry: () -> Unit){
+fun Nav(onRetry: () -> Unit) {
     val context = LocalContext.current as Activity
     TopAppBar(
         title = {
@@ -187,13 +206,39 @@ fun Nav(onRetry: () -> Unit){
         contentColor = Color.Black,
         navigationIcon = {
             IconButton(onClick = { context?.finish() }) {
-                Icon(imageVector = Icons.Outlined.ArrowBack, contentDescription = null, tint = Color.White)
+                Icon(
+                    imageVector = Icons.Outlined.ArrowBack,
+                    contentDescription = null,
+                    tint = Color.White
+                )
             }
         },
         actions = {
             IconButton(onClick = { onRetry() }) {
-                Icon(imageVector = Icons.Outlined.Refresh, contentDescription = null, tint = Color.White)
+                Icon(
+                    imageVector = Icons.Outlined.Refresh,
+                    contentDescription = null,
+                    tint = Color.White
+                )
             }
         }
     )
+}
+
+fun addPrediction(
+    predictionViewModel: PredictionViewModel,
+    inputImage: Bitmap,
+    mask: Bitmap
+) {
+    val prediction = Prediction(
+        inputImage,
+        mask,
+        "90%",
+        "90%",
+        "90%",
+        false,
+        Calendar.getInstance().timeInMillis
+    )
+    predictionViewModel.addPrediction(prediction)
+
 }
