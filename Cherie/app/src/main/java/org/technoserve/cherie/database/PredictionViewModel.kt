@@ -17,13 +17,17 @@ class PredictionViewModel(application: Application) : AndroidViewModel(applicati
         readAllData = repository.readAllPredictions
     }
 
+    fun getSinglePrediction(predictionId: Long): LiveData<List<Prediction>>{
+        return repository.readPrediction(predictionId)
+    }
+
     fun addPrediction(prediction: Prediction) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.addPrediction(prediction)
         }
     }
 
-    fun updateTodo(prediction: Prediction) {
+    fun updatePrediction(prediction: Prediction) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.updatePrediction(prediction)
         }

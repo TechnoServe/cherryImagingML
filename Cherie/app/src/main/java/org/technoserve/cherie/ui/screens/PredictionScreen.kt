@@ -32,6 +32,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import org.joda.time.Instant
 import org.pytorch.IValue
 import org.pytorch.torchvision.TensorImageUtils
 import org.technoserve.cherie.Pix2PixModule
@@ -80,7 +83,7 @@ fun nearestPixel(col1: IntArray): Int{
 fun PredictionScreen(imageAsByteArray: ByteArray) {
     val bitmap: Bitmap = BitmapFactory.decodeByteArray(imageAsByteArray, 0, imageAsByteArray.size)
     val mask: Bitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-    val context = LocalContext.current
+    val context = LocalContext.current as Activity
     val complete = remember { mutableStateOf(false) }
     val predictionViewModel: PredictionViewModel = viewModel(
         factory = PredictionViewModelFactory(context.applicationContext as Application)
@@ -141,29 +144,32 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     }
 
     LaunchedEffect(imageAsByteArray) {
-        val startTime = System.nanoTime()
-        Pix2PixModule.loadModel(context)
-        Log.d(
-            "Model Task",
-            "Loading model took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
-        )
-        runModel()
-        Log.d(
-            "Model Task",
-            "Running inference took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
-        )
+        GlobalScope.launch {
+            val startTime = System.nanoTime()
+            Pix2PixModule.loadModel(context)
+            Log.d(
+                "Model Task",
+                "Loading model took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
+            )
+            runModel()
+            Log.d(
+                "Model Task",
+                "Running inference took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
+            )
+        }
     }
 
 
     val onRetry = {
+        complete.value = false
         runModel()
     }
 
     fun calculateRipenessScore(scoreType: ScoreType = ScoreType.RIPE): Float {
-        when(scoreType) {
-            ScoreType.RIPE -> return ((redCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
-            ScoreType.UNDERRIPE -> return ((greenCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
-            ScoreType.OVERRIPE -> return ((blueCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+        return when(scoreType) {
+            ScoreType.RIPE -> ((redCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+            ScoreType.UNDERRIPE -> ((greenCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+            ScoreType.OVERRIPE -> ((blueCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
         }
     }
 
@@ -203,40 +209,54 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Text(
-                    text = "Ripeness score: ${calculateRipenessScore()}",
+                    text = "Ripeness score: ${String.format("%.2f", calculateRipenessScore(ScoreType.RIPE))}%",
                     color = MaterialTheme.colors.onSurface,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     fontSize = 18.sp
                 )
                 Spacer(modifier = Modifier.height(32.dp))
-            }
 
-            Button(
-                onClick = {
-                    addPrediction(
-                        predictionViewModel,
-                        bitmap,
-                        mask,
-                        calculateRipenessScore(ScoreType.RIPE),
-                        calculateRipenessScore(ScoreType.UNDERRIPE),
-                        calculateRipenessScore(ScoreType.OVERRIPE),
+                Button(
+                    onClick = {
+                        addPrediction(
+                            predictionViewModel,
+                            bitmap,
+                            mask,
+                            calculateRipenessScore(ScoreType.RIPE),
+                            calculateRipenessScore(ScoreType.UNDERRIPE),
+                            calculateRipenessScore(ScoreType.OVERRIPE),
+                        )
+                        context.finish()
+                    },
+                    modifier = Modifier.requiredWidth(160.dp),
+                    shape = RoundedCornerShape(0),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 4.dp,
+                        disabledElevation = 0.dp
                     )
-                },
-                modifier = Modifier.requiredWidth(160.dp),
-                shape = RoundedCornerShape(0),
-                elevation = ButtonDefaults.elevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 4.dp,
-                    disabledElevation = 0.dp
+                ) {
+                    Text(
+                        text = "Save",
+                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            } else {
+                Column (
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
                 )
-            ) {
-                Text(
-                    text = "Save",
-                    modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                {
+                    LinearProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Predicting ripeness score...",
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
@@ -265,7 +285,11 @@ fun Nav(onRetry: () -> Unit) {
             }
         },
         actions = {
-            IconButton(onClick = { onRetry() }) {
+            IconButton(onClick = {
+                GlobalScope.launch {
+                    onRetry()
+                }
+            }) {
                 Icon(
                     imageVector = Icons.Outlined.Refresh,
                     contentDescription = null,
@@ -290,9 +314,8 @@ fun addPrediction(
         ripe = "${String.format("%.2f", ripe)}%",
         overripe = "${String.format("%.2f", overripe)}%",
         underripe = "${String.format("%.2f", underripe)}%",
-        synced =false,
-        createdAt = Calendar.getInstance().timeInMillis
+        synced = false,
+        createdAt = Instant.now().millis
     )
     predictionViewModel.addPrediction(prediction)
-
 }

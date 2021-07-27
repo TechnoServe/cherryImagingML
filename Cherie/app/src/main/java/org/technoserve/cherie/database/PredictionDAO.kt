@@ -7,7 +7,7 @@ import androidx.room.*
 interface PredictionDAO {
 
     @Transaction
-    @Query("SELECT * FROM Predictions")
+    @Query("SELECT * FROM Predictions ORDER BY createdAt DESC")
     fun getAll(): LiveData<List<Prediction>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
