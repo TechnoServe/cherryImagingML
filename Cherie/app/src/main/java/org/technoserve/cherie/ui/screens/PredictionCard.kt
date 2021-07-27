@@ -2,7 +2,6 @@ package org.technoserve.cherie.ui.screens
 
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Card
 import androidx.compose.material.MaterialTheme
@@ -10,6 +9,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -34,9 +34,9 @@ fun PredictionCard(
     ) {
 
         Column() {
-            prediction.image?.let { url ->
+            prediction.inputImage?.let { img ->
                 Image(
-                    painter = painterResource(id = R.drawable.cherry),
+                    bitmap = img.asImageBitmap(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(225.dp),
@@ -44,14 +44,23 @@ fun PredictionCard(
                     contentDescription = null
                 )
             }
-            prediction.content?.let { content ->
+            prediction.mask?.let { img ->
+                Image(
+                    bitmap = img.asImageBitmap(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(225.dp),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = null
+                )
+            }
+            prediction.ripe?.let { content ->
                     Text(
                         text = content,
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentWidth(Alignment.End)
-                            .align(Alignment.CenterHorizontally)
-                        ,
+                            .align(Alignment.CenterHorizontally),
                         style = MaterialTheme.typography.h5
                     )
             }

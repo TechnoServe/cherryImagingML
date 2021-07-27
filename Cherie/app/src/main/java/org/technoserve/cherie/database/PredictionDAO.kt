@@ -1,20 +1,29 @@
 package org.technoserve.cherie.database
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.Query
+import androidx.lifecycle.LiveData
+import androidx.room.*
 
 @Dao
 interface PredictionDAO {
 
-    @Query("SELECT * FROM prediction")
-    fun getAll(): List<Prediction>
+    @Transaction
+    @Query("SELECT * FROM Predictions")
+    fun getAll(): LiveData<List<Prediction>>
 
-    @Insert
-    fun insert(note: Prediction)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(prediction: Prediction)
+
+    @Transaction
+    @Query("SELECT * FROM Predictions WHERE id = :id ORDER BY id DESC")
+    fun getPredictionById(id: Long) : LiveData<List<Prediction>>
+
+    @Update
+    suspend fun update(prediction: Prediction)
 
     @Delete
-    fun delete(note: Prediction)
+    suspend fun delete(prediction: Prediction)
+
+    @Query("DELETE FROM Predictions")
+    suspend fun deleteAll()
 
 }

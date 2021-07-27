@@ -55,6 +55,6 @@ fun ProfileScreen() {
 }
 @Preview
 @Composable
-fun DefPreview() {
+fun ProfileScreenPreview() {
     ProfileScreen()
 }
