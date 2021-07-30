@@ -15,10 +15,13 @@ import org.technoserve.cherie.ui.navigation.NavigationItem
 fun HomeScreen() {
     val navController = rememberNavController()
     Scaffold(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         bottomBar = { BottomNavigationBar(navController) },
     ) {
-        Navigation(navController)
+        innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()){
+            Navigation(navController)
+        }
     }
 }
 

@@ -6,8 +6,8 @@ class PredictionRepository(private val predictionDAO: PredictionDAO) {
 
     val readAllPredictions: LiveData<List<Prediction>> = predictionDAO.getAll()
 
-    suspend fun readPrediction(predictionId: Long) {
-        predictionDAO.getPredictionById(predictionId)
+    fun readPrediction(predictionId: Long): LiveData<List<Prediction>> {
+        return predictionDAO.getPredictionById(predictionId)
     }
 
     suspend fun addPrediction(prediction: Prediction) {

@@ -1,1 +1,3 @@
 /build
+**.apk
+/release/output-metadata.json

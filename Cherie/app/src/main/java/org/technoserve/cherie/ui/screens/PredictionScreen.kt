@@ -32,6 +32,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import org.joda.time.Instant
 import org.pytorch.IValue
 import org.pytorch.torchvision.TensorImageUtils
 import org.technoserve.cherie.Pix2PixModule
@@ -39,23 +42,56 @@ import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
 import java.util.Calendar
+import kotlin.math.pow
+
+
+fun distance(col1: IntArray, col2: IntArray): Double{
+    val (r1, g1, b1) = col1
+    val (r2, g2, b2) = col2
+    return (r1 - r2 + 0.0).pow(2.0) + (g1 - g2 + 0.0).pow(2.0) + (b1 - b2 + 0.0).pow(2.0)
+}
+
+val refColors: Array<IntArray> = arrayOf(
+    intArrayOf(255, 0, 0),        // red
+    intArrayOf(0, 255, 0),        // green
+    intArrayOf(0, 0, 255),        // blue
+    intArrayOf(0, 0, 0),          // black
+    intArrayOf(255, 255, 255),    // white
+)
+
+enum class ScoreType {
+    RIPE, UNDERRIPE, OVERRIPE
+}
+
+fun nearestPixel(col1: IntArray): Int{
+    var idxClosest = 0
+    var minDistance = distance(col1, refColors[idxClosest])
+
+    for (i in 1 until refColors.size){
+        val currentDistance = distance(col1, refColors[i])
+        if(currentDistance < minDistance){
+            minDistance = currentDistance
+            idxClosest = i
+        }
+    }
+    val closestColor = refColors[idxClosest]
+    return rgb(closestColor[0], closestColor[1], closestColor[2])
+}
 
 
 @Composable
 fun PredictionScreen(imageAsByteArray: ByteArray) {
     val bitmap: Bitmap = BitmapFactory.decodeByteArray(imageAsByteArray, 0, imageAsByteArray.size)
-    var mask: Bitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-    val context = LocalContext.current
+    val mask: Bitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+    val context = LocalContext.current as Activity
     val complete = remember { mutableStateOf(false) }
     val predictionViewModel: PredictionViewModel = viewModel(
         factory = PredictionViewModelFactory(context.applicationContext as Application)
     )
 
-    fun calculateRipenessScores(): FloatArray {
-        var scores = floatArrayOf(90.0f, 5.0f, 5.0f)
-        // TODO: get ripeness score from mask
-        return scores
-    }
+    var redCount = 0
+    var blueCount = 0
+    var greenCount = 0
 
     fun runModel() {
         val NORM_MEAN_RGB = floatArrayOf(0.5f, 0.5f, 0.5f)
@@ -74,8 +110,6 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
 
         val width: Int = bitmap.width
         val height: Int = bitmap.height
-
-        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 
         var max = 0f
         var min = 999999f
@@ -96,31 +130,47 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
             val r = ((scores[i] - min) / delta * 255.0f).toInt()
             val g = ((scores[i + width * height] - min) / delta * 255.0f).toInt()
             val b = ((scores[i + width * height * 2] - min) / delta * 255.0f).toInt()
-            val color: Int = rgb(r, g, b)
-            pixels[i] = color
+
+            pixels[i] = nearestPixel(intArrayOf(r, g, b))
+
+            when (pixels[i]) {
+                rgb(255, 0, 0) -> redCount++
+                rgb(0, 255, 0) -> greenCount++
+                rgb(0, 0, 255) -> blueCount++
+            }
         }
         mask.setPixels(pixels, 0, width, 0, 0, width, height)
         complete.value = true
-        calculateRipenessScores()
     }
 
     LaunchedEffect(imageAsByteArray) {
-        val startTime = System.nanoTime()
-        Pix2PixModule.loadModel(context)
-        Log.d(
-            "Model Task",
-            "Loading model took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
-        )
-        runModel()
-        Log.d(
-            "Model Task",
-            "Running inference took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
-        )
+        GlobalScope.launch {
+            val startTime = System.nanoTime()
+            Pix2PixModule.loadModel(context)
+            Log.d(
+                "Model Task",
+                "Loading model took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
+            )
+            runModel()
+            Log.d(
+                "Model Task",
+                "Running inference took: " + ((System.nanoTime() - startTime) / 1000000) + "mS\n"
+            )
+        }
     }
 
 
     val onRetry = {
+        complete.value = false
         runModel()
+    }
+
+    fun calculateRipenessScore(scoreType: ScoreType = ScoreType.RIPE): Float {
+        return when(scoreType) {
+            ScoreType.RIPE -> ((redCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+            ScoreType.UNDERRIPE -> ((greenCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+            ScoreType.OVERRIPE -> ((blueCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
+        }
     }
 
     Scaffold(
@@ -156,36 +206,57 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                         .width(256.dp)
                         .padding(start = 32.dp, end = 32.dp)
                 )
-            }
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            Text(
-                text = "Ripeness: ",
-                color = MaterialTheme.colors.onSurface,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                fontSize = 18.sp
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = {
-                    addPrediction(predictionViewModel, bitmap, mask)
-                },
-                modifier = Modifier.requiredWidth(160.dp),
-                shape = RoundedCornerShape(0),
-                elevation = ButtonDefaults.elevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 4.dp,
-                    disabledElevation = 0.dp
-                )
-            ) {
                 Text(
-                    text = "Save",
-                    modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    text = "Ripeness score: ${String.format("%.2f", calculateRipenessScore(ScoreType.RIPE))}%",
+                    color = MaterialTheme.colors.onSurface,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontSize = 18.sp
                 )
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = {
+                        addPrediction(
+                            predictionViewModel,
+                            bitmap,
+                            mask,
+                            calculateRipenessScore(ScoreType.RIPE),
+                            calculateRipenessScore(ScoreType.UNDERRIPE),
+                            calculateRipenessScore(ScoreType.OVERRIPE),
+                        )
+                        context.finish()
+                    },
+                    modifier = Modifier.requiredWidth(160.dp),
+                    shape = RoundedCornerShape(0),
+                    elevation = ButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 4.dp,
+                        disabledElevation = 0.dp
+                    )
+                ) {
+                    Text(
+                        text = "Save",
+                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            } else {
+                Column (
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+                )
+                {
+                    LinearProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Predicting ripeness score...",
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
@@ -205,7 +276,7 @@ fun Nav(onRetry: () -> Unit) {
         backgroundColor = MaterialTheme.colors.primary,
         contentColor = Color.Black,
         navigationIcon = {
-            IconButton(onClick = { context?.finish() }) {
+            IconButton(onClick = { context.finish() }) {
                 Icon(
                     imageVector = Icons.Outlined.ArrowBack,
                     contentDescription = null,
@@ -214,7 +285,11 @@ fun Nav(onRetry: () -> Unit) {
             }
         },
         actions = {
-            IconButton(onClick = { onRetry() }) {
+            IconButton(onClick = {
+                GlobalScope.launch {
+                    onRetry()
+                }
+            }) {
                 Icon(
                     imageVector = Icons.Outlined.Refresh,
                     contentDescription = null,
@@ -228,17 +303,19 @@ fun Nav(onRetry: () -> Unit) {
 fun addPrediction(
     predictionViewModel: PredictionViewModel,
     inputImage: Bitmap,
-    mask: Bitmap
+    mask: Bitmap,
+    ripe: Float,
+    underripe: Float,
+    overripe: Float
 ) {
     val prediction = Prediction(
         inputImage,
         mask,
-        "90%",
-        "90%",
-        "90%",
-        false,
-        Calendar.getInstance().timeInMillis
+        ripe = "${String.format("%.2f", ripe)}%",
+        overripe = "${String.format("%.2f", overripe)}%",
+        underripe = "${String.format("%.2f", underripe)}%",
+        synced = false,
+        createdAt = Instant.now().millis
     )
     predictionViewModel.addPrediction(prediction)
-
 }

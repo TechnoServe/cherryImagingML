@@ -50,7 +50,7 @@ import java.io.ByteArrayOutputStream
 
 @Composable
 fun InferenceScreen() {
-    var imageUri = remember { mutableStateOf<Uri?>(null) }
+    val imageUri = remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
     val currentPhotoPath = remember { mutableStateOf("") }
@@ -91,6 +91,7 @@ fun InferenceScreen() {
                 setInitialCropWindowPaddingRatio(0f)
                 setActivityTitle("Resize Image")
                 setRequestedSize(512, 512)
+                setMinCropResultSize(512, 512)
                 setOutputCompressQuality(80)
                 setOutputCompressFormat(Bitmap.CompressFormat.JPEG)
             }
@@ -122,7 +123,7 @@ fun InferenceScreen() {
         }
 
     val launchCamera: () -> Unit = {
-        val photoURI: Uri? = context?.let {
+        val photoURI: Uri? = context.let {
             createImageFile().let { it1 ->
                 FileProvider.getUriForFile(
                     it,
