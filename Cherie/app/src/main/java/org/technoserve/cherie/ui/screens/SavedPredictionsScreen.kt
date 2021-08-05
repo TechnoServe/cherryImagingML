@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -28,8 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
-import androidx.constraintlayout.solver.state.helpers.AlignVerticallyReference
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.technoserve.cherie.R
 import org.technoserve.cherie.database.PredictionViewModel

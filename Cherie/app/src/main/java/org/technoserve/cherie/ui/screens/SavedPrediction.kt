@@ -2,6 +2,7 @@ package org.technoserve.cherie.ui.screens
 
 import android.app.Activity
 import android.app.Application
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,10 +37,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.constraintlayout.solver.state.helpers.AlignVerticallyReference
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.storage.FirebaseStorage
 import org.technoserve.cherie.R
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
+import org.technoserve.cherie.helpers.ImageUtils
 
 @Composable
 fun SavedPredictionScreen(predictionId: Long) {
@@ -52,6 +55,20 @@ fun SavedPredictionScreen(predictionId: Long) {
     val prediction = predictionViewModel.getSinglePrediction(predictionId).observeAsState(listOf()).value
 
     val showDialog = remember { mutableStateOf(false) }
+
+    fun upload(item: Prediction){
+        val fileName = item.id + item.createdAt
+        val storageReference = FirebaseStorage.getInstance().getReference("images/$fileName")
+        val combinedBitmaps = ImageUtils.combineBitmaps(item.inputImage, item.mask)
+        val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps)
+        Log.d("ImageURI", imageUri.toString())
+        //TODO: Update value in RoomDB to synced
+        storageReference.putFile(imageUri).addOnSuccessListener {
+            Log.d("UPLOAD", "Uploaded successfully" + it.uploadSessionUri.toString())
+        }.addOnFailureListener {
+            Log.d("UPLOAD", "Upload Failed")
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -123,7 +140,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Button(
-                        onClick = {  },
+                        onClick = { upload(item) },
                         modifier = Modifier
                             .requiredWidth(160.dp)
                             .background(MaterialTheme.colors.background)
