@@ -2,6 +2,7 @@ package org.technoserve.cherie.ui.screens
 
 import android.app.Activity
 import android.app.Activity.RESULT_OK
+import android.app.Application
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -9,42 +10,76 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
+import com.firebase.ui.auth.data.model.User
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.launch
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
+import org.joda.time.format.DateTimeFormatter
 import org.technoserve.cherie.R
+import org.technoserve.cherie.database.Prediction
+import org.technoserve.cherie.database.PredictionViewModel
+import org.technoserve.cherie.database.PredictionViewModelFactory
+import org.technoserve.cherie.ui.components.ButtonPrimary
 
 @Composable
 fun ProfileScreen() {
 
     val context = LocalContext.current as Activity
+    val scaffoldState = rememberScaffoldState()
+    val snackbarCoroutineScope = rememberCoroutineScope()
+
+    val predictionViewModel: PredictionViewModel = viewModel(
+        factory = PredictionViewModelFactory(context.applicationContext as Application)
+    )
+
+    val listItems = predictionViewModel.readAllData.observeAsState(listOf()).value
+
+    var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+
+    // Choose authentication providers
+    val providers = arrayListOf(
+        AuthUI.IdpConfig.PhoneBuilder().build(),
+        AuthUI.IdpConfig.EmailBuilder().build(),
+    )
+
+    LaunchedEffect(user) {
+        snackbarCoroutineScope.launch {
+            scaffoldState.snackbarHostState.showSnackbar("Snack")
+        }
+    }
 
     fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
         val response = result.idpResponse
         if (result.resultCode == RESULT_OK) {
             // Successfully signed in
-            val user = FirebaseAuth.getInstance().currentUser
-            if (user != null) {
-                Log.d("USER", user.uid)
+            val newUser = FirebaseAuth.getInstance().currentUser
+            if (newUser != null) {
+                user = newUser
+                snackbarCoroutineScope.launch {
+                    scaffoldState.snackbarHostState.showSnackbar("Login Successful")
+                }
             }
             // ...
         } else {
-            if(response == null){
-
-            }
             // Sign in failed. If response is null the user canceled the
             // sign-in flow using the back button. Otherwise check
             // response.getError().getErrorCode() and handle the error.
@@ -53,40 +88,31 @@ fun ProfileScreen() {
     }
 
     // See: https://developer.android.com/training/basics/intents/result
-    val signInLauncher = rememberLauncherForActivityResult(
-        FirebaseAuthUIActivityResultContract()
-    ) { res ->
-        onSignInResult(res)
-    }
-//
-//    // Choose authentication providers
-    val providers = arrayListOf(
-        AuthUI.IdpConfig.EmailBuilder().build(),
-        AuthUI.IdpConfig.PhoneBuilder().build(),
-    )
-
-// Create and launch sign-in intent
-    LaunchedEffect(providers) {
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user == null) {
-            val signInIntent = AuthUI.getInstance()
-                .createSignInIntentBuilder()
-                .setAvailableProviders(providers)
-                .setLogo(R.drawable.cherry)
-                .setTheme(R.style.Theme_Cherie)
-                .build()
-            signInLauncher.launch(signInIntent)
-        } else {
-            Log.d("USER", user.uid)
-            val fileName = "dummy.jpg"
-            val storageReference = FirebaseStorage.getInstance().getReference("images/$fileName")
-            val imageUri = Uri.parse("android.resource://org.technoserve.cherie/drawable/cherry")
-            storageReference.putFile(imageUri).addOnSuccessListener {
-                Log.d("UPLOAD", "Uploaded successfully" + it.uploadSessionUri.toString())
-            }.addOnFailureListener {
-                Log.d("UPLOAD", "Upload Failed")
-            }
+    val signInLauncher =
+        rememberLauncherForActivityResult(FirebaseAuthUIActivityResultContract()) { res ->
+            onSignInResult(res)
         }
+
+    fun startAuthFlow() {
+        val signInIntent = AuthUI.getInstance()
+            .createSignInIntentBuilder()
+            .setAvailableProviders(providers)
+            .setLogo(R.drawable.cherie)
+            .setTheme(R.style.LoginTheme)
+            .build()
+        signInLauncher.launch(signInIntent)
+    }
+
+    fun logout() {
+        AuthUI.getInstance()
+            .signOut(context)
+            .addOnCompleteListener {
+                val message = if (it.isSuccessful) "Logout Successful" else "Logout Failed"
+                user = null
+                snackbarCoroutineScope.launch {
+                    scaffoldState.snackbarHostState.showSnackbar(message)
+                }
+            }
     }
 
 
@@ -108,42 +134,26 @@ fun ProfileScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colors.background)
-                .wrapContentSize(Alignment.Center)
+                .padding(top = 32.dp)
+                .background(MaterialTheme.colors.background),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = "Profile",
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colors.onSurface,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-                textAlign = TextAlign.Center,
-                fontSize = 25.sp
-            )
 
-            Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = {
-                    AuthUI.getInstance()
-                        .signOut(context)
-                        .addOnCompleteListener {
-                            Log.d("LOGOUT RESULT: ", it.result.toString())
-                        }
-                },
-                modifier = Modifier.requiredWidth(160.dp),
-                shape = RoundedCornerShape(0),
-                elevation = ButtonDefaults.elevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 4.dp,
-                    disabledElevation = 0.dp
-                )
-            ) {
-                Text(
-                    text = "Logout",
-                    modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+            if (user == null) {
+                ButtonPrimary(onClick = { startAuthFlow() }, label = "Log in")
+                Spacer(modifier = Modifier.height(64.dp))
             }
+
+            user?.let { UserInfo(it) }
+
+            Stats(listItems)
+
+            if (user != null) {
+                Spacer(modifier = Modifier.weight(1f))
+                ButtonPrimary(onClick = { logout() }, label = "Log out")
+                Spacer(modifier = Modifier.height(64.dp))
+            }
+
 
         }
     }
@@ -153,4 +163,87 @@ fun ProfileScreen() {
 @Composable
 fun ProfileScreenPreview() {
     ProfileScreen()
+}
+
+@Composable
+fun UserInfo(user: FirebaseUser) {
+    val fmt: DateTimeFormatter = DateTimeFormat.forPattern("yyyy/MM/dd HH:mm:ss")
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        if(user.phoneNumber == null && user.email != null){
+            Text("Email: " + user.email!!)
+            Text("Name: " + user.displayName!!)
+        } else {
+            Text(user.phoneNumber!!)
+        }
+        Text(
+            text = "Last Sign In: " + DateTime(user.metadata?.lastSignInTimestamp).toString(fmt),
+            fontSize = 12.sp
+        )
+        Spacer(modifier = Modifier.height(64.dp))
+    }
+}
+
+@Composable
+fun Stats(listItems: List<Prediction>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(text = "Average Ripeness Stats", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Stat(title = "Daily", value = "98%")
+            StatDivider()
+            Stat(title = "Weekly", value = "88%")
+            StatDivider()
+            Stat(title = "Monthly", value = "92%")
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(text = "Usage Stats", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Stat(title = "Generated\nPredictions", value = "47")
+            StatDivider()
+            Stat(title = "Saved\nPredictions", value = "32")
+            StatDivider()
+            Stat(title = "Uploads", value = "0")
+        }
+    }
+}
+
+@Composable
+fun Stat(title: String, value: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = value, fontSize = 36.sp, fontWeight = FontWeight.Black)
+        Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+fun StatDivider() {
+    Spacer(modifier = Modifier.width(8.dp))
+    Divider(
+        color = Color.LightGray,
+        modifier = Modifier
+            .width(1.dp)
+            .height(64.dp)
+            .padding(vertical = 4.dp)
+    )
+    Spacer(modifier = Modifier.width(8.dp))
 }

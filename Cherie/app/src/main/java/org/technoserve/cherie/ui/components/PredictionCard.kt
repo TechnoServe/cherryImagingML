@@ -25,8 +25,10 @@ import org.technoserve.cherie.database.PredictionViewModel
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
 import org.technoserve.cherie.SavedPredictionActivity
+import org.technoserve.cherie.ui.components.ButtonPrimary
+import org.technoserve.cherie.ui.components.ButtonSecondary
 
-var fmt: DateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
+var fmt: DateTimeFormatter = DateTimeFormat.forPattern("yyyy/MM/dd HH:mm:ss")
 
 @Composable
 fun PredictionCard(
@@ -91,45 +93,9 @@ fun PredictionCard(
                     .align(Alignment.CenterVertically),
                 verticalArrangement = Arrangement.Center
             ) {
-                Button(
-                    onClick = { },
-                    modifier = Modifier
-                        .requiredWidth(120.dp)
-                        .background(MaterialTheme.colors.background)
-                        .border(1.dp, MaterialTheme.colors.primary),
-                    shape = RoundedCornerShape(0),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background),
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 4.dp,
-                        disabledElevation = 0.dp
-                    )
-                ) {
-                    Text(
-                        text = "Sync",
-                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colors.primary
-                    )
-                }
+                ButtonSecondary(onClick = { /*TODO*/ }, label = "Sync", requiredWidth = 120.dp)
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { predictionViewModel.deletePrediction(prediction) },
-                    modifier = Modifier.requiredWidth(120.dp),
-                    shape = RoundedCornerShape(0),
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 4.dp,
-                        disabledElevation = 0.dp
-                    )
-                ) {
-                    Text(
-                        text = "Delete",
-                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                ButtonPrimary(onClick = {  predictionViewModel.deletePrediction(prediction) }, label = "Delete", requiredWidth = 120.dp)
             }
         }
     }

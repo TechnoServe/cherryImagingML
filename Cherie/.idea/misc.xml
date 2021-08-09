@@ -6,6 +6,14 @@
         <entry key="../../../../../layout/compose-model-1626899416769.xml" value="4.5" />
         <entry key="../../../../../layout/compose-model-1627344303211.xml" value="0.33614864864864863" />
         <entry key="../../../../../layout/compose-model-1627344334730.xml" value="0.33614864864864863" />
+        <entry key="app/src/main/res/drawable/bg_gradient.xml" value="0.4041666666666667" />
+        <entry key="app/src/main/res/drawable/ic_home.xml" value="0.21302083333333333" />
+        <entry key="app/src/main/res/drawable/ic_logs.xml" value="0.21302083333333333" />
+        <entry key="app/src/main/res/drawable/ic_profile.xml" value="0.21302083333333333" />
+        <entry key="app/src/main/res/drawable/splash_background.xml" value="0.4041666666666667" />
+        <entry key="app/src/main/res/drawable/splash_background_dark.xml" value="0.23697916666666666" />
+        <entry key="app/src/main/res/drawable/splash_screen.xml" value="0.4041666666666667" />
+        <entry key="app/src/main/res/drawable/splash_transition.xml" value="0.4041666666666667" />
         <entry key="app/src/main/res/xml/provider_paths.xml" value="0.21979166666666666" />
       </map>
     </option>

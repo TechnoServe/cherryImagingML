@@ -8,14 +8,14 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import java.io.FileOutputStream
 import java.io.File
-import kotlin.math.max
 
 
 class ImageUtils {
     companion object {
         fun createTempBitmapUri(context: Context, bmp: Bitmap): Uri {
+            // TODO: Replace filename with Unique UID
             val file = File(context.cacheDir, "MyIMG.png")
-            var outStream: FileOutputStream? = null
+            var outStream: FileOutputStream?
             try {
                 outStream = FileOutputStream(file)
                 bmp.compress(Bitmap.CompressFormat.PNG, 100, outStream)
