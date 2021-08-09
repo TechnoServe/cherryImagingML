@@ -26,11 +26,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.technoserve.cherie.R
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
+import java.util.*
+import kotlin.concurrent.schedule
 
 @Composable
 fun SavedPredictionsScreen() {
@@ -43,6 +46,11 @@ fun SavedPredictionsScreen() {
     val listItems = predictionViewModel.readAllData.observeAsState(listOf()).value
 
     val showDialog = remember { mutableStateOf(false) }
+    val loading = remember { mutableStateOf(true) }
+
+    Timer().schedule(1800) {
+        loading.value = false
+    }
 
     Scaffold(
         topBar = {
@@ -77,26 +85,43 @@ fun SavedPredictionsScreen() {
             )
         }
     ) {
-        if(listItems.isEmpty()){
-            NoSavedPredictions()
+        if(loading.value){
+            Column (
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            )
+            {
+                LinearProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Loading saved predictions...",
+                    textAlign = TextAlign.Center
+                )
+            }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colors.background),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                items(
-                    items = listItems,
-                    key = { item ->
-                        item.id
+            if(listItems.isEmpty()){
+                NoSavedPredictions()
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colors.background),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    items(
+                        items = listItems,
+                        key = { item ->
+                            item.id
+                        }
+                    ) { item ->
+                        PredictionCard(prediction = item, predictionViewModel)
                     }
-                ) { item ->
-                    PredictionCard(prediction = item, predictionViewModel)
                 }
             }
         }
+
 
         if (showDialog.value) DeleteAllDialogPresenter(showDialog, predictionViewModel)
     }

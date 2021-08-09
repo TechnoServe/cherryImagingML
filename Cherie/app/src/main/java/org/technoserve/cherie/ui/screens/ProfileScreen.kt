@@ -30,6 +30,8 @@ import com.firebase.ui.auth.data.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -39,13 +41,15 @@ import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
 import org.technoserve.cherie.ui.components.ButtonPrimary
+import org.technoserve.cherie.ui.components.ButtonSecondary
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    scaffoldState: ScaffoldState,
+    homeScope: CoroutineScope
+) {
 
     val context = LocalContext.current as Activity
-    val scaffoldState = rememberScaffoldState()
-    val snackbarCoroutineScope = rememberCoroutineScope()
 
     val predictionViewModel: PredictionViewModel = viewModel(
         factory = PredictionViewModelFactory(context.applicationContext as Application)
@@ -61,12 +65,6 @@ fun ProfileScreen() {
         AuthUI.IdpConfig.EmailBuilder().build(),
     )
 
-    LaunchedEffect(user) {
-        snackbarCoroutineScope.launch {
-            scaffoldState.snackbarHostState.showSnackbar("Snack")
-        }
-    }
-
     fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
         val response = result.idpResponse
         if (result.resultCode == RESULT_OK) {
@@ -74,7 +72,7 @@ fun ProfileScreen() {
             val newUser = FirebaseAuth.getInstance().currentUser
             if (newUser != null) {
                 user = newUser
-                snackbarCoroutineScope.launch {
+                homeScope.launch {
                     scaffoldState.snackbarHostState.showSnackbar("Login Successful")
                 }
             }
@@ -109,7 +107,7 @@ fun ProfileScreen() {
             .addOnCompleteListener {
                 val message = if (it.isSuccessful) "Logout Successful" else "Logout Failed"
                 user = null
-                snackbarCoroutineScope.launch {
+                homeScope.launch {
                     scaffoldState.snackbarHostState.showSnackbar(message)
                 }
             }
@@ -154,6 +152,13 @@ fun ProfileScreen() {
                 Spacer(modifier = Modifier.height(64.dp))
             }
 
+            ButtonSecondary(onClick = {
+                homeScope.launch {
+                    Log.d("Snacking", "Away")
+                    scaffoldState.snackbarHostState.showSnackbar("What's your favourite snack?")
+                }
+            }, label = "Snackify")
+
 
         }
     }
@@ -162,7 +167,8 @@ fun ProfileScreen() {
 @Preview
 @Composable
 fun ProfileScreenPreview() {
-    ProfileScreen()
+    val scaffoldState = rememberScaffoldState()
+    ProfileScreen(homeScope = GlobalScope, scaffoldState = scaffoldState)
 }
 
 @Composable

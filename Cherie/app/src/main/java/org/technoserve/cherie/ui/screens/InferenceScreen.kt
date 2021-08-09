@@ -39,12 +39,17 @@ import java.io.File
 import java.io.IOException
 import android.graphics.*
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.ui.window.Dialog
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageView
 import com.canhub.cropper.options
 import org.technoserve.cherie.PredictionActivity
+import org.technoserve.cherie.ui.components.ButtonPrimary
 import java.io.ByteArrayOutputStream
 
 
@@ -94,6 +99,7 @@ fun InferenceScreen() {
                 setMinCropResultSize(512, 512)
                 setOutputCompressQuality(80)
                 setOutputCompressFormat(Bitmap.CompressFormat.JPEG)
+                setCropMenuCropButtonIcon(R.drawable.done)
             }
         )
     }
@@ -228,29 +234,16 @@ fun FullScreenDialog(
                 Box(
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(32.dp)
-                    ) {
-                        FloatingActionButton(
-                            contentColor = MaterialTheme.colors.onSurface,
-                            backgroundColor = Color.White,
-                            onClick = { onClose() }
-                        ) {
-                            Icon(Icons.Outlined.Close, "", tint = Color.Black)
-                        }
-                    }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "Proceed with prediction?",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 25.sp,
-                            color = MaterialTheme.colors.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(32.dp))
+//                        Text(
+//                            text = "Proceed with prediction?",
+//                            fontWeight = FontWeight.Bold,
+//                            fontSize = 25.sp,
+//                            color = MaterialTheme.colors.onSurface,
+//                        )
+//                        Spacer(modifier = Modifier.height(32.dp))
                         Image(
                             bitmap = image.asImageBitmap(),
                             contentDescription = null,
@@ -264,46 +257,31 @@ fun FullScreenDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 36.dp),
+                            .padding(bottom = 72.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Button(
+                        val tint = if(isSystemInDarkTheme()) Color.White else MaterialTheme.colors.primary
+                        IconButton(
                             onClick = { onClose() },
-                            modifier = Modifier
-                                .requiredWidth(160.dp)
-                                .background(MaterialTheme.colors.background)
-                                .border(1.dp, MaterialTheme.colors.primary),
-                            shape = RoundedCornerShape(0),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background),
-                            elevation = ButtonDefaults.elevation(
-                                defaultElevation = 0.dp,
-                                pressedElevation = 4.dp,
-                                disabledElevation = 0.dp
-                            )
+                            modifier = Modifier.requiredWidth(160.dp),
                         ) {
-                            Text(
-                                text = "No, Cancel",
-                                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colors.primary
+                            Icon(
+                                Icons.Filled.Replay,
+                                contentDescription = "retake",
+                                tint = tint,
+                                modifier = Modifier.width(48.dp).height(48.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(16.dp))
-                        Button(
+                        IconButton(
                             onClick = { onConfirm() },
                             modifier = Modifier.requiredWidth(160.dp),
-                            shape = RoundedCornerShape(0),
-                            elevation = ButtonDefaults.elevation(
-                                defaultElevation = 0.dp,
-                                pressedElevation = 4.dp,
-                                disabledElevation = 0.dp
-                            )
                         ) {
-                            Text(
-                                text = "Yes, Proceed",
-                                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                            Icon(
+                                Icons.Filled.Done,
+                                contentDescription = "Use this Image",
+                                tint = tint,
+                                modifier = Modifier.width(48.dp).height(48.dp)
                             )
                         }
                     }

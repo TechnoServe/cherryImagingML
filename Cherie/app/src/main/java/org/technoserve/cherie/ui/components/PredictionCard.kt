@@ -72,7 +72,7 @@ fun PredictionCard(
                 Image(
                     bitmap = prediction.inputImage.asImageBitmap(),
                     modifier = Modifier
-                        .width(120.dp)
+                        .requiredWidth(120.dp)
                         .height(120.dp),
                     contentScale = ContentScale.FillBounds,
                     contentDescription = null
@@ -81,7 +81,7 @@ fun PredictionCard(
                 Image(
                     bitmap = prediction.mask.asImageBitmap(),
                     modifier = Modifier
-                        .width(120.dp)
+                        .requiredWidth(120.dp)
                         .height(120.dp),
                     contentScale = ContentScale.FillBounds,
                     contentDescription = null

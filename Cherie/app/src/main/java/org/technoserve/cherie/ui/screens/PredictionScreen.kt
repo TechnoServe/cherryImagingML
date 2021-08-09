@@ -41,6 +41,7 @@ import org.technoserve.cherie.Pix2PixModule
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
+import org.technoserve.cherie.ui.components.ButtonPrimary
 import java.util.Calendar
 import kotlin.math.pow
 
@@ -217,33 +218,17 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                 )
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Button(
-                    onClick = {
-                        addPrediction(
-                            predictionViewModel,
-                            bitmap,
-                            mask,
-                            calculateRipenessScore(ScoreType.RIPE),
-                            calculateRipenessScore(ScoreType.UNDERRIPE),
-                            calculateRipenessScore(ScoreType.OVERRIPE),
-                        )
-                        context.finish()
-                    },
-                    modifier = Modifier.requiredWidth(160.dp),
-                    shape = RoundedCornerShape(0),
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 4.dp,
-                        disabledElevation = 0.dp
+                ButtonPrimary(onClick = {
+                    addPrediction(
+                        predictionViewModel,
+                        bitmap,
+                        mask,
+                        calculateRipenessScore(ScoreType.RIPE),
+                        calculateRipenessScore(ScoreType.UNDERRIPE),
+                        calculateRipenessScore(ScoreType.OVERRIPE),
                     )
-                ) {
-                    Text(
-                        text = "Save",
-                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                    context.finish()
+                }, label = "Save")
             } else {
                 Column (
                 modifier = Modifier.fillMaxWidth(),
