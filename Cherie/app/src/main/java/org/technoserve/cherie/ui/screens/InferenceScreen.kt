@@ -67,6 +67,7 @@ fun InferenceScreen(
     val context = LocalContext.current
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
     val currentPhotoPath = remember { mutableStateOf("") }
+    val dialogIsVisible = remember { mutableStateOf(false) }
 
     @Throws(IOException::class)
     fun createImageFile(): File {
@@ -89,8 +90,12 @@ fun InferenceScreen(
             bitmap.value = BitmapFactory.decodeStream(imageUri.value?.let {
                 uriContent?.let { it1 -> context?.contentResolver?.openInputStream(it1) }
             })
+            dialogIsVisible.value = true
         } else {
             val exception = result.error
+            homeScope.launch {
+                scaffoldState.snackbarHostState.showSnackbar("Error: Something went wrong")
+            }
             Log.d("CHERIE@CROP", "Error : ${exception?.localizedMessage}")
         }
     }
@@ -158,10 +163,19 @@ fun InferenceScreen(
     }
 
     val dismissDialog: () -> Unit = {
-        // Wipe state
-        imageUri.value = null
-        bitmap.value = null
-        currentPhotoPath.value = ""
+        val backToCrop = false
+        if(backToCrop){
+            // Alternate flow - Take user back to Crop Modal
+            startCrop()
+            dialogIsVisible.value = false
+        } else {
+            // Wipe state
+            imageUri.value = null
+            bitmap.value = null
+            currentPhotoPath.value = ""
+
+            dialogIsVisible.value = false
+        }
     }
 
     val runPrediction =
@@ -210,7 +224,7 @@ fun InferenceScreen(
             RowLayout(loadFromGallery, launchCamera)
         }
         bitmap.value?.let {
-            FullScreenDialog(bitmap.value != null, it, dismissDialog, proceedToPredictionScreen)
+            FullScreenDialog(dialogIsVisible.value, it, dismissDialog, proceedToPredictionScreen)
         }
     }
 }
