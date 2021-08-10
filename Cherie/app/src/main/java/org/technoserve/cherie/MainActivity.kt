@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setTheme(R.style.Theme_Cherie_NoActionBar)
-        Pix2PixModule.loadModel(this)
+//        Pix2PixModule.loadModel(this)
         setContent {
             CherieTheme {
                 val multiplePermissionsState = rememberMultiplePermissionsState(

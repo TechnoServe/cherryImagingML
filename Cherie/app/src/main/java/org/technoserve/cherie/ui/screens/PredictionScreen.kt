@@ -12,7 +12,6 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,10 +26,10 @@ import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 
 import android.os.SystemClock
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -38,12 +37,17 @@ import org.joda.time.Instant
 import org.pytorch.IValue
 import org.pytorch.torchvision.TensorImageUtils
 import org.technoserve.cherie.Pix2PixModule
+import org.technoserve.cherie.Preferences
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
 import org.technoserve.cherie.ui.components.ButtonPrimary
 import java.util.Calendar
 import kotlin.math.pow
+import android.content.Intent
+
+
+
 
 
 fun distance(col1: IntArray, col2: IntArray): Double{
@@ -89,6 +93,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     val predictionViewModel: PredictionViewModel = viewModel(
         factory = PredictionViewModelFactory(context.applicationContext as Application)
     )
+    val sharedPrefs by remember { mutableStateOf(Preferences(context)) }
 
     var redCount = 0
     var blueCount = 0
@@ -142,6 +147,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
         }
         mask.setPixels(pixels, 0, width, 0, 0, width, height)
         complete.value = true
+        sharedPrefs.generatedPredictions++
     }
 
     LaunchedEffect(imageAsByteArray) {
@@ -162,8 +168,12 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
 
 
     val onRetry = {
-        complete.value = false
-        runModel()
+        if(complete.value){
+            complete.value = false
+            runModel()
+        } else {
+//            TODO: Snackbar: (Prediction is still currently running)
+        }
     }
 
     fun calculateRipenessScore(scoreType: ScoreType = ScoreType.RIPE): Float {
@@ -177,12 +187,14 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     Scaffold(
         topBar = { Nav(onRetry = onRetry) }
     ) {
+        val scrollState = rememberScrollState()
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colors.background)
                 .wrapContentSize(Alignment.TopCenter)
-                .padding(top = 60.dp),
+                .verticalScroll(scrollState)
+                .padding(top = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
 
@@ -196,7 +208,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
             )
 
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (complete.value) {
                 Image(
@@ -207,7 +219,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                         .width(256.dp)
                         .padding(start = 32.dp, end = 32.dp)
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = "Ripeness score: ${String.format("%.2f", calculateRipenessScore(ScoreType.RIPE))}%",
@@ -216,7 +228,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                     textAlign = TextAlign.Center,
                     fontSize = 18.sp
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 ButtonPrimary(onClick = {
                     addPrediction(
@@ -227,6 +239,9 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                         calculateRipenessScore(ScoreType.UNDERRIPE),
                         calculateRipenessScore(ScoreType.OVERRIPE),
                     )
+                    // TODO: Snackbar: Show Prediction saved successfully
+                    val returnIntent = Intent()
+                    context.setResult(Activity.RESULT_OK, returnIntent)
                     context.finish()
                 }, label = "Save")
             } else {
@@ -235,8 +250,9 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                 horizontalAlignment = Alignment.CenterHorizontally
                 )
                 {
+                    Spacer(modifier = Modifier.height(32.dp))
                     LinearProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     Text(
                         text = "Predicting ripeness score...",
                         textAlign = TextAlign.Center
@@ -261,7 +277,11 @@ fun Nav(onRetry: () -> Unit) {
         backgroundColor = MaterialTheme.colors.primary,
         contentColor = Color.Black,
         navigationIcon = {
-            IconButton(onClick = { context.finish() }) {
+            IconButton(onClick = {
+                val returnIntent = Intent()
+                context.setResult(Activity.RESULT_CANCELED, returnIntent)
+                context.finish()
+            }) {
                 Icon(
                     imageVector = Icons.Outlined.ArrowBack,
                     contentDescription = null,
@@ -296,9 +316,9 @@ fun addPrediction(
     val prediction = Prediction(
         inputImage,
         mask,
-        ripe = "${String.format("%.2f", ripe)}%",
-        overripe = "${String.format("%.2f", overripe)}%",
-        underripe = "${String.format("%.2f", underripe)}%",
+        ripe,
+        overripe,
+        underripe,
         synced = false,
         createdAt = Instant.now().millis
     )

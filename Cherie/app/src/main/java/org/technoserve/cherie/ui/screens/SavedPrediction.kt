@@ -101,7 +101,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                     .fillMaxSize()
                     .background(MaterialTheme.colors.background)
                     .wrapContentSize(Alignment.TopCenter)
-                    .padding(top = 60.dp),
+                    .padding(top = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Image(
@@ -113,7 +113,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                         .padding(start = 32.dp, end = 32.dp)
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Image(
                     bitmap = item.mask.asImageBitmap(),
@@ -123,7 +123,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                         .width(256.dp)
                         .padding(start = 32.dp, end = 32.dp)
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = "Ripeness score: ${item.ripe}",
@@ -132,7 +132,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                     textAlign = TextAlign.Center,
                     fontSize = 18.sp
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
                     modifier = Modifier
@@ -206,6 +206,7 @@ fun DeleteDialogPresenter(
     prediction: Prediction,
     predictionViewModel: PredictionViewModel
 ) {
+    val context = LocalContext.current as Activity
     AlertDialog(
         onDismissRequest = { showDialog.value = false },
         title = {
@@ -249,6 +250,7 @@ fun DeleteDialogPresenter(
                     onClick = {
                         predictionViewModel.deletePrediction(prediction)
                         showDialog.value = false
+                        context.finish()
                     },
                     modifier = Modifier.requiredWidth(160.dp),
                     shape = RoundedCornerShape(0),

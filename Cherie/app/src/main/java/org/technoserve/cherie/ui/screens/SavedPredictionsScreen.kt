@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.CoroutineScope
 import org.technoserve.cherie.R
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
@@ -36,7 +37,10 @@ import java.util.*
 import kotlin.concurrent.schedule
 
 @Composable
-fun SavedPredictionsScreen() {
+fun SavedPredictionsScreen(
+    scaffoldState: ScaffoldState,
+    homeScope: CoroutineScope
+) {
 
     val context = LocalContext.current
     val predictionViewModel: PredictionViewModel = viewModel(

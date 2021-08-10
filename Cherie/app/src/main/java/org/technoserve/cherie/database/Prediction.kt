@@ -21,13 +21,13 @@ data class Prediction(
     val mask: Bitmap,
 
     @ColumnInfo(name = "ripe")
-    val ripe: String,
+    val ripe: Float,
 
     @ColumnInfo(name = "overripe")
-    val overripe: String,
+    val overripe: Float,
 
     @ColumnInfo(name = "underripe")
-    val underripe: String,
+    val underripe: Float,
 
     @ColumnInfo(name = "synced")
     val synced: Boolean = false,

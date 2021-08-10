@@ -3,12 +3,9 @@ package org.technoserve.cherie.ui.screens
 import android.app.Activity
 import android.app.Activity.RESULT_OK
 import android.app.Application
-import android.net.Uri
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -16,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,22 +22,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
-import com.firebase.ui.auth.data.model.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.format.DateTimeFormatter
+import org.technoserve.cherie.Preferences
 import org.technoserve.cherie.R
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
 import org.technoserve.cherie.ui.components.ButtonPrimary
-import org.technoserve.cherie.ui.components.ButtonSecondary
 
 @Composable
 fun ProfileScreen(
@@ -58,6 +52,8 @@ fun ProfileScreen(
     val listItems = predictionViewModel.readAllData.observeAsState(listOf()).value
 
     var user by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+
+    val sharedPrefs by remember { mutableStateOf(Preferences(context)) }
 
     // Choose authentication providers
     val providers = arrayListOf(
@@ -144,21 +140,13 @@ fun ProfileScreen(
 
             user?.let { UserInfo(it) }
 
-            Stats(listItems)
+            Stats(listItems, sharedPrefs)
 
             if (user != null) {
                 Spacer(modifier = Modifier.weight(1f))
                 ButtonPrimary(onClick = { logout() }, label = "Log out")
                 Spacer(modifier = Modifier.height(64.dp))
             }
-
-            ButtonSecondary(onClick = {
-                homeScope.launch {
-                    Log.d("Snacking", "Away")
-                    scaffoldState.snackbarHostState.showSnackbar("What's your favourite snack?")
-                }
-            }, label = "Snackify")
-
 
         }
     }
@@ -195,7 +183,21 @@ fun UserInfo(user: FirebaseUser) {
 }
 
 @Composable
-fun Stats(listItems: List<Prediction>) {
+fun Stats(listItems: List<Prediction>, sharedPrefs: Preferences) {
+    var averageRipe = 0f
+    var averageUnderripe = 0f
+    var averageOverripe = 0f
+    if(listItems.isNotEmpty()){
+        for(item in listItems){
+            averageRipe += item.ripe
+            averageUnderripe += item.underripe
+            averageOverripe += item.overripe
+        }
+        averageRipe /= listItems.size
+        averageUnderripe /= listItems.size
+        averageOverripe /= listItems.size
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -208,11 +210,17 @@ fun Stats(listItems: List<Prediction>) {
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Stat(title = "Daily", value = "98%")
+            Box(modifier=Modifier.weight(1f)){
+                Stat(title = "Ripe", value = "${String.format("%.0f", averageRipe)}%", color= Color.Red)
+            }
             StatDivider()
-            Stat(title = "Weekly", value = "88%")
+            Box(modifier=Modifier.weight(1f)){
+                Stat(title = "Underripe", value = "${String.format("%.0f", averageUnderripe)}%")
+            }
             StatDivider()
-            Stat(title = "Monthly", value = "92%")
+            Box(modifier=Modifier.weight(1f)){
+                Stat(title = "Overripe", value = "${String.format("%.0f", averageOverripe)}%")
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -222,21 +230,28 @@ fun Stats(listItems: List<Prediction>) {
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Stat(title = "Generated\nPredictions", value = "47")
+            Box(modifier=Modifier.weight(1f)){
+                Stat(title = "Generated\nPredictions", value = sharedPrefs.generatedPredictions.toString())
+            }
             StatDivider()
-            Stat(title = "Saved\nPredictions", value = "32")
+            Box(modifier=Modifier.weight(1f)){
+                Stat(title = "Saved\nPredictions", value = listItems.size.toString())
+            }
             StatDivider()
-            Stat(title = "Uploads", value = "0")
+            Box(modifier=Modifier.weight(1f)){
+                Stat(title = "Uploads\n", value = sharedPrefs.uploadedPredictions.toString())
+            }
         }
     }
 }
 
 @Composable
-fun Stat(title: String, value: String) {
+fun Stat(title: String, value: String, color: Color = MaterialTheme.colors.onSurface) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(text = value, fontSize = 36.sp, fontWeight = FontWeight.Black)
+        Text(text = value, fontSize = 36.sp, fontWeight = FontWeight.Black, color = color)
         Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }

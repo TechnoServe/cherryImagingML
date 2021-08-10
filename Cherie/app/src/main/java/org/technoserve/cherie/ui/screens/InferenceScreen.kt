@@ -45,16 +45,24 @@ import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageView
 import com.canhub.cropper.options
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.technoserve.cherie.PredictionActivity
 import org.technoserve.cherie.ui.components.ButtonPrimary
+import org.technoserve.cherie.ui.navigation.NavigationItem
 import java.io.ByteArrayOutputStream
 
 
 @Composable
-fun InferenceScreen() {
+fun InferenceScreen(
+    navController: NavController,
+    scaffoldState: ScaffoldState,
+    homeScope: CoroutineScope
+) {
     val imageUri = remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
@@ -156,6 +164,27 @@ fun InferenceScreen() {
         currentPhotoPath.value = ""
     }
 
+    val runPrediction =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                homeScope.launch {
+                    scaffoldState.snackbarHostState.showSnackbar("Saved Successfully")
+                }
+                navController.navigate(NavigationItem.Logs.route) {
+                    navController.graph.startDestinationRoute?.let { route ->
+                        popUpTo(route) {
+                            saveState = true
+                        }
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+                Log.d("TAG", "Got result OK - Saving Prediction")
+            } else {
+                Log.d("TAG", "Back button was pressed - Save Cancelled")
+            }
+        }
+
     val proceedToPredictionScreen: () -> Unit = {
 
         val stream = ByteArrayOutputStream()
@@ -163,9 +192,7 @@ fun InferenceScreen() {
         val imgAsByteArray: ByteArray = stream.toByteArray()
 
         val intent = PredictionActivity.newIntent(context, imgAsByteArray)
-        // Image from camera is too large and crashes the when the next line is run
-        // The Binder transaction buffer has a limited fixed size of 1Mb
-        context.startActivity(intent)
+        runPrediction.launch(intent)
 
         dismissDialog()
     }
@@ -176,14 +203,17 @@ fun InferenceScreen() {
             .fillMaxWidth()
             .background(color = MaterialTheme.colors.primary)
     ) {
-        HeaderWithIcon()
-        RowLayout(loadFromGallery, launchCamera)
+        Box(modifier = Modifier.weight(1f)) {
+            HeaderWithIcon()
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            RowLayout(loadFromGallery, launchCamera)
+        }
         bitmap.value?.let {
             FullScreenDialog(bitmap.value != null, it, dismissDialog, proceedToPredictionScreen)
         }
     }
 }
-
 
 
 @Composable
@@ -214,7 +244,6 @@ fun HeaderWithIcon() {
         }
     }
 }
-
 
 
 @Composable
@@ -260,7 +289,8 @@ fun FullScreenDialog(
                             .padding(bottom = 72.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        val tint = if(isSystemInDarkTheme()) Color.White else MaterialTheme.colors.primary
+                        val tint =
+                            if (isSystemInDarkTheme()) Color.White else MaterialTheme.colors.primary
                         IconButton(
                             onClick = { onClose() },
                             modifier = Modifier.requiredWidth(160.dp),
@@ -269,7 +299,9 @@ fun FullScreenDialog(
                                 Icons.Filled.Replay,
                                 contentDescription = "retake",
                                 tint = tint,
-                                modifier = Modifier.width(48.dp).height(48.dp)
+                                modifier = Modifier
+                                    .width(48.dp)
+                                    .height(48.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(16.dp))
@@ -281,7 +313,9 @@ fun FullScreenDialog(
                                 Icons.Filled.Done,
                                 contentDescription = "Use this Image",
                                 tint = tint,
-                                modifier = Modifier.width(48.dp).height(48.dp)
+                                modifier = Modifier
+                                    .width(48.dp)
+                                    .height(48.dp)
                             )
                         }
                     }
@@ -302,7 +336,7 @@ fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
             .background(color = MaterialTheme.colors.background),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(modifier = Modifier.height(64.dp))
+        Spacer(modifier = Modifier.height(48.dp))
         Text(
             text = "Capture Image For Prediction",
             color = MaterialTheme.colors.onSurface,
@@ -313,7 +347,7 @@ fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
-                .padding(start = 32.dp, top = 48.dp, end = 32.dp, bottom = 80.dp),
+                .padding(start = 32.dp, top = 48.dp, end = 32.dp),
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -333,7 +367,10 @@ fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
                     Icon(Icons.Outlined.PhotoCamera, "", tint = MaterialTheme.colors.primary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Take picture", color = MaterialTheme.colors.onSurface)
+                Text(
+                    text = "Take picture",
+                    color = MaterialTheme.colors.onSurface
+                )
             }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
