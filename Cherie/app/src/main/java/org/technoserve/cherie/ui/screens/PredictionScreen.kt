@@ -95,6 +95,9 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     )
     val sharedPrefs by remember { mutableStateOf(Preferences(context)) }
 
+    val scaffoldState = rememberScaffoldState()
+    val scope = rememberCoroutineScope()
+
     var redCount = 0
     var blueCount = 0
     var greenCount = 0
@@ -166,13 +169,19 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
         }
     }
 
+    fun showStillRunningMessage(){
+        scope.launch {
+            scaffoldState.snackbarHostState.showSnackbar("Prediction is currently running")
+        }
+    }
+
 
     val onRetry = {
         if(complete.value){
             complete.value = false
             runModel()
         } else {
-//            TODO: Snackbar: (Prediction is still currently running)
+            showStillRunningMessage()
         }
     }
 
@@ -185,6 +194,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     }
 
     Scaffold(
+        scaffoldState = scaffoldState,
         topBar = { Nav(onRetry = onRetry) }
     ) {
         val scrollState = rememberScrollState()
