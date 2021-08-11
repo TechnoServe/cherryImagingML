@@ -168,11 +168,12 @@ fun UserInfo(user: FirebaseUser) {
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        if(user.phoneNumber == null && user.email != null){
-            Text("Email: " + user.email!!)
-            Text("Name: " + user.displayName!!)
-        } else {
-            Text(user.phoneNumber!!)
+        if(user.email != null){
+            Text("Email: " + user.email)
+            Text("Name: " + user.displayName)
+        }
+        if(user.phoneNumber != null){
+            Text("Phone: " + user.phoneNumber)
         }
         Text(
             text = "Last Sign In: " + DateTime(user.metadata?.lastSignInTimestamp).toString(fmt),

@@ -2,26 +2,21 @@ package org.technoserve.cherie.ui.screens
 
 import android.app.Activity
 import android.app.Application
-import android.net.Uri
+import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -30,19 +25,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
-import androidx.constraintlayout.solver.state.helpers.AlignVerticallyReference
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.storage.FirebaseStorage
-import org.technoserve.cherie.R
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
 import org.technoserve.cherie.helpers.ImageUtils
+import org.technoserve.cherie.ui.components.ButtonPrimary
+import org.technoserve.cherie.ui.components.ButtonSecondary
+
 
 @Composable
 fun SavedPredictionScreen(predictionId: Long) {
@@ -52,11 +46,12 @@ fun SavedPredictionScreen(predictionId: Long) {
         factory = PredictionViewModelFactory(context.applicationContext as Application)
     )
 
-    val prediction = predictionViewModel.getSinglePrediction(predictionId).observeAsState(listOf()).value
+    val prediction =
+        predictionViewModel.getSinglePrediction(predictionId).observeAsState(listOf()).value
 
     val showDialog = remember { mutableStateOf(false) }
 
-    fun upload(item: Prediction){
+    fun upload(item: Prediction) {
         val fileName = item.id + item.createdAt
         val storageReference = FirebaseStorage.getInstance().getReference("images/$fileName")
         val combinedBitmaps = ImageUtils.combineBitmaps(item.inputImage, item.mask)
@@ -83,7 +78,11 @@ fun SavedPredictionScreen(predictionId: Long) {
                 backgroundColor = MaterialTheme.colors.primary,
                 contentColor = Color.Black,
                 navigationIcon = {
-                    IconButton(onClick = { context.finish() }) {
+                    IconButton(onClick = {
+                        val returnIntent = Intent()
+                        context.setResult(Activity.RESULT_CANCELED, returnIntent)
+                        context.finish()
+                    }) {
                         Icon(
                             imageVector = Icons.Outlined.ArrowBack,
                             contentDescription = null,
@@ -94,7 +93,7 @@ fun SavedPredictionScreen(predictionId: Long) {
             )
         }
     ) {
-        if(prediction.isNotEmpty()){
+        if (prediction.isNotEmpty()) {
             val item = prediction[0]
             Column(
                 modifier = Modifier
@@ -139,44 +138,34 @@ fun SavedPredictionScreen(predictionId: Long) {
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Button(
-                        onClick = { upload(item) },
-                        modifier = Modifier
-                            .requiredWidth(160.dp)
-                            .background(MaterialTheme.colors.background)
-                            .border(1.dp, MaterialTheme.colors.primary),
-                        shape = RoundedCornerShape(0),
-                        colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background),
-                        elevation = ButtonDefaults.elevation(
-                            defaultElevation = 0.dp,
-                            pressedElevation = 4.dp,
-                            disabledElevation = 0.dp
-                        )
-                    ) {
-                        Text(
-                            text = "Upload",
+                    ButtonSecondary(onClick = { upload(item) }, label = "Upload") {
+                        Row(
                             modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colors.primary
-                        )
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Outlined.CloudUpload, "", tint = MaterialTheme.colors.primary)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Upload",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colors.primary
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Button(
-                        onClick = { showDialog.value = true },
-                        modifier = Modifier.requiredWidth(160.dp),
-                        shape = RoundedCornerShape(0),
-                        elevation = ButtonDefaults.elevation(
-                            defaultElevation = 0.dp,
-                            pressedElevation = 4.dp,
-                            disabledElevation = 0.dp
-                        )
-                    ) {
-                        Text(
-                            text = "Delete",
+                    ButtonPrimary(onClick = { showDialog.value = true }, label = "Delete") {
+                        Row(
                             modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Outlined.Delete, "", tint = Color.White)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Delete",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
 
@@ -185,11 +174,11 @@ fun SavedPredictionScreen(predictionId: Long) {
             }
         } else {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                LinearProgressIndicator()
+//                LinearProgressIndicator()
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Loading...",
@@ -223,50 +212,17 @@ fun DeleteDialogPresenter(
                     .height(72.dp)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
-            ){
-                Button(
-                    onClick = { showDialog.value = false },
-                    modifier = Modifier
-                        .requiredWidth(160.dp)
-                        .background(MaterialTheme.colors.background)
-                        .border(1.dp, MaterialTheme.colors.primary),
-                    shape = RoundedCornerShape(0),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background),
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 4.dp,
-                        disabledElevation = 0.dp
-                    )
-                ) {
-                    Text(
-                        text = "No, Cancel",
-                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colors.primary
-                    )
-                }
+            ) {
+                ButtonSecondary(onClick = { showDialog.value = false }, label = "No, Cancel")
                 Spacer(modifier = Modifier.width(16.dp))
-                Button(
-                    onClick = {
-                        predictionViewModel.deletePrediction(prediction)
-                        showDialog.value = false
-                        context.finish()
-                    },
-                    modifier = Modifier.requiredWidth(160.dp),
-                    shape = RoundedCornerShape(0),
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 4.dp,
-                        disabledElevation = 0.dp
-                    )
-                ) {
-                    Text(
-                        text = "Yes, Proceed",
-                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+                ButtonPrimary(onClick = {
+                    val returnIntent = Intent()
+                    returnIntent.putExtra("ID", prediction.id)
+                    predictionViewModel.deletePrediction(prediction)
+                    showDialog.value = false
+                    context.setResult(DELETED, returnIntent)
+                    context.finish()
+                }, label = "Yes, Proceed")
             }
         },
     )

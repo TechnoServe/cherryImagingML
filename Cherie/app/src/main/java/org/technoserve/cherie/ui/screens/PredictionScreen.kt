@@ -246,7 +246,6 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                         calculateRipenessScore(ScoreType.UNDERRIPE),
                         calculateRipenessScore(ScoreType.OVERRIPE),
                     )
-                    // TODO: Snackbar: Show Prediction saved successfully
                     val returnIntent = Intent()
                     context.setResult(Activity.RESULT_OK, returnIntent)
                     context.finish()

@@ -36,7 +36,7 @@ fun Navigation(
     scaffoldState: ScaffoldState,
     homeScope: CoroutineScope
 ) {
-    NavHost(navController, startDestination = NavigationItem.Inference.route) {
+    NavHost(navController, startDestination = NavigationItem.Logs.route) {
         composable(NavigationItem.Inference.route) {
             InferenceScreen(
                 navController = navController,

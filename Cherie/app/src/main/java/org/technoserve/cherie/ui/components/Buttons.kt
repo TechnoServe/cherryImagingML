@@ -17,7 +17,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ButtonPrimary(onClick: () -> Unit, label: String, requiredWidth: Dp = 160.dp){
+fun ButtonPrimary(
+    onClick: () -> Unit,
+    label: String,
+    requiredWidth: Dp = 160.dp,
+    content: @Composable (() -> Unit)? = null
+){
     Button(
         onClick = {
             onClick()
@@ -30,17 +35,26 @@ fun ButtonPrimary(onClick: () -> Unit, label: String, requiredWidth: Dp = 160.dp
             disabledElevation = 0.dp
         )
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
+        if(content == null){
+            Text(
+                text = label,
+                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        } else {
+            content()
+        }
     }
 }
 
 @Composable
-fun ButtonSecondary(onClick: () -> Unit, label: String, requiredWidth: Dp = 160.dp){
+fun ButtonSecondary(
+    onClick: () -> Unit,
+    label: String,
+    requiredWidth: Dp = 160.dp,
+    content: @Composable (() -> Unit)? = null
+){
     Button(
         onClick = { onClick() },
         modifier = Modifier
@@ -55,11 +69,15 @@ fun ButtonSecondary(onClick: () -> Unit, label: String, requiredWidth: Dp = 160.
             disabledElevation = 0.dp
         )
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colors.primary
-        )
+        if(content == null){
+            Text(
+                text = label,
+                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colors.primary
+            )
+        } else {
+            content()
+        }
     }
 }
