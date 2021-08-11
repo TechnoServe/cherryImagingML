@@ -26,4 +26,13 @@ interface PredictionDAO {
     @Query("DELETE FROM Predictions")
     suspend fun deleteAll()
 
+    @Query("UPDATE Predictions SET synced=1 WHERE id = :id")
+    suspend fun updateSyncStatus(id: Long)
+
+    @Query("UPDATE Predictions SET scheduledForSync=1 WHERE id IN (:ids)")
+    suspend fun updateSyncListStatus(ids: List<Long>)
+
+    @Query("DELETE FROM Predictions WHERE id IN (:ids)")
+    suspend fun deleteList(ids: List<Long>)
+
 }

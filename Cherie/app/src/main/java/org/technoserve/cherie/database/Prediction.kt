@@ -32,6 +32,9 @@ data class Prediction(
     @ColumnInfo(name = "synced")
     val synced: Boolean = false,
 
+    @ColumnInfo(name = "scheduledForSync")
+    val scheduledForSync: Boolean = false,
+
     @ColumnInfo(name = "createdAt")
     @TypeConverters(DateConverter::class)
     val createdAt: Long
@@ -39,6 +42,7 @@ data class Prediction(
     @PrimaryKey(autoGenerate = true)
     @NonNull
     var id: Long = 0L
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

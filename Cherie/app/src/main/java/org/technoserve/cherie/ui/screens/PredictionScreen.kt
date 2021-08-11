@@ -325,7 +325,6 @@ fun addPrediction(
         ripe,
         overripe,
         underripe,
-        synced = false,
         createdAt = Instant.now().millis
     )
     predictionViewModel.addPrediction(prediction)

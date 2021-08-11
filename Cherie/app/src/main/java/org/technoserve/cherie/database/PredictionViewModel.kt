@@ -3,6 +3,7 @@ package org.technoserve.cherie.database
 
 import android.app.Application
 import androidx.lifecycle.*
+import androidx.room.Query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -42,6 +43,24 @@ class PredictionViewModel(application: Application) : AndroidViewModel(applicati
     fun deleteAllPredictions() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.deleteAllPredictions()
+        }
+    }
+
+    fun updateSyncStatus(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateSyncStatus(id)
+        }
+    }
+
+    fun updateSyncListStatus(ids: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateSyncListStatus(ids)
+        }
+    }
+
+    fun deleteList(ids: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteList(ids)
         }
     }
 }

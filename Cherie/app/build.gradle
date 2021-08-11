@@ -90,6 +90,11 @@ dependencies {
     implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
     implementation "androidx.compose.runtime:runtime-rxjava2:$compose_version"
 
+    def work_version = "2.5.0"
+    implementation "androidx.work:work-runtime-ktx:$work_version"
+    implementation "androidx.work:work-gcm:$work_version"
+    implementation "androidx.work:work-multiprocess:$work_version"
+
     implementation 'org.pytorch:pytorch_android_lite:1.9.0'
     implementation 'org.pytorch:pytorch_android_torchvision:1.9.0'
 

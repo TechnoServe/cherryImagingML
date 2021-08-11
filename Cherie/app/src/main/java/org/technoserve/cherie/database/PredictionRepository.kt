@@ -1,6 +1,7 @@
 package org.technoserve.cherie.database
 
 import androidx.lifecycle.LiveData
+import androidx.room.Query
 
 class PredictionRepository(private val predictionDAO: PredictionDAO) {
 
@@ -24,6 +25,18 @@ class PredictionRepository(private val predictionDAO: PredictionDAO) {
 
     suspend fun deleteAllPredictions() {
         predictionDAO.deleteAll()
+    }
+
+    suspend fun updateSyncStatus(id: Long){
+        predictionDAO.updateSyncStatus(id)
+    }
+
+    suspend fun updateSyncListStatus(ids: List<Long>){
+        predictionDAO.updateSyncListStatus(ids)
+    }
+
+    suspend fun deleteList(ids: List<Long>){
+        predictionDAO.deleteList(ids)
     }
 
 

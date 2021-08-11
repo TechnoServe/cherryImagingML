@@ -1,5 +1,6 @@
 package org.technoserve.cherie.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
@@ -13,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import org.technoserve.cherie.ui.navigation.BottomNavigationBar
 import org.technoserve.cherie.ui.navigation.NavigationItem
 
+@ExperimentalFoundationApi
 @Composable
 fun HomeScreen() {
     val navController = rememberNavController()
@@ -30,6 +32,7 @@ fun HomeScreen() {
     }
 }
 
+@ExperimentalFoundationApi
 @Composable
 fun Navigation(
     navController: NavHostController,

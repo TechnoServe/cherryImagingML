@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.runtime.MutableState
@@ -28,7 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.*
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
@@ -36,6 +38,9 @@ import org.technoserve.cherie.database.PredictionViewModelFactory
 import org.technoserve.cherie.helpers.ImageUtils
 import org.technoserve.cherie.ui.components.ButtonPrimary
 import org.technoserve.cherie.ui.components.ButtonSecondary
+import org.technoserve.cherie.workers.UploadWorker
+import org.technoserve.cherie.workers.WORKER_IMAGE_NAME_KEY
+import org.technoserve.cherie.workers.WORKER_IMAGE_URI_KEY
 
 
 @Composable
@@ -49,7 +54,39 @@ fun SavedPredictionScreen(predictionId: Long) {
     val prediction =
         predictionViewModel.getSinglePrediction(predictionId).observeAsState(listOf()).value
 
+    val workManager: WorkManager = WorkManager.getInstance(context)
     val showDialog = remember { mutableStateOf(false) }
+
+    val user = FirebaseAuth.getInstance().currentUser
+
+    val outputWorkInfoItems: LiveData<List<WorkInfo>>
+
+    fun runUpload(item: Prediction) {
+        val fileName = (user?.uid) + "_" + item.id
+        val combinedBitmaps = ImageUtils.combineBitmaps(item.inputImage, item.mask)
+        val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps)
+        val workdata = workDataOf(
+            WORKER_IMAGE_NAME_KEY to fileName,
+            WORKER_IMAGE_URI_KEY to imageUri.toString()
+        )
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+
+        val uploadRequest = OneTimeWorkRequestBuilder<UploadWorker>()
+            .setInputData(workdata)
+            .addTag("UPLOAD TAG")
+            .setConstraints(constraints)
+            .build()
+
+        workManager.beginUniqueWork(
+            fileName,
+            ExistingWorkPolicy.KEEP,
+            uploadRequest
+        ).enqueue()
+    }
 
     fun upload(item: Prediction) {
         val fileName = item.id + item.createdAt
@@ -63,6 +100,10 @@ fun SavedPredictionScreen(predictionId: Long) {
         }.addOnFailureListener {
             Log.d("UPLOAD", "Upload Failed")
         }
+        val workdata = workDataOf(
+            WORKER_IMAGE_NAME_KEY to fileName,
+            WORKER_IMAGE_URI_KEY to imageUri.toString()
+        )
     }
 
     Scaffold(
@@ -125,7 +166,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Ripeness score: ${item.ripe}",
+                    text = "Ripeness score: ${String.format("%.2f", item.ripe)}%",
                     color = MaterialTheme.colors.onSurface,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
@@ -138,12 +179,22 @@ fun SavedPredictionScreen(predictionId: Long) {
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    ButtonSecondary(onClick = { upload(item) }, label = "Upload") {
+                    ButtonSecondary(
+                        onClick = {
+//                            upload(item)
+                            runUpload(item)
+                        },
+                        label = "Upload"
+                    ) {
                         Row(
                             modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Outlined.CloudUpload, "", tint = MaterialTheme.colors.primary)
+                            Icon(
+                                Icons.Outlined.CloudUpload,
+                                "",
+                                tint = MaterialTheme.colors.primary
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Upload",

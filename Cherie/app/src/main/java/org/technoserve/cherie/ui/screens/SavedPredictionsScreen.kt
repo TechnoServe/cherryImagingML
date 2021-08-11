@@ -1,6 +1,7 @@
 package org.technoserve.cherie.ui.screens
 
 import android.app.Application
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,25 +16,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -42,8 +44,8 @@ import org.technoserve.cherie.SavedPredictionActivity
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
-import org.technoserve.cherie.viewmodels.SavedPredictionsViewModel
-import org.technoserve.cherie.viewmodels.SavedPredictionsViewModelFactory
+import org.technoserve.cherie.ui.components.ButtonPrimary
+import org.technoserve.cherie.ui.components.ButtonSecondary
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -64,7 +66,9 @@ fun SavedPredictionsScreen(
 
     val listItems = predictionViewModel.readAllData.observeAsState(listOf()).value
 
-    val showDialog = remember { mutableStateOf(false) }
+    var showDeleteDialog = remember { mutableStateOf(false) }
+    var showSyncDialog = remember { mutableStateOf(false) }
+
     val loading = remember { mutableStateOf(true) }
     var previewedPredictions: MutableList<Prediction> = mutableListOf()
 
@@ -98,16 +102,9 @@ fun SavedPredictionsScreen(
 
     val selectedIds = remember { mutableStateListOf<Long>() }
 
-    fun toggleSelectedIds(id: Long){
-        if(selectedIds.contains(id)){
-            selectedIds.remove(id)
-        } else {
-            selectedIds.add(id)
-        }
-    }
 
-    fun selectOrDeselectAll(){
-        if(selectedIds.isEmpty()){
+    fun selectOrDeselectAll() {
+        if (selectedIds.isEmpty()) {
             val ids = listItems.map { it.id }
             selectedIds.addAll(ids)
         } else {
@@ -125,7 +122,7 @@ fun SavedPredictionsScreen(
     }
 
     val checkboxAction: (id: Long) -> Unit = {
-        if(selectedIds.contains(it)){
+        if (selectedIds.contains(it)) {
             selectedIds.remove(it)
         } else {
             selectedIds.add(it)
@@ -134,11 +131,30 @@ fun SavedPredictionsScreen(
 
     val clickRowItem: (id: Long) -> Unit = {
         // No item selected
-        if(selectedIds.isEmpty()){
+        if (selectedIds.isEmpty()) {
             proceedToPredictionScreen(it)
         } else {
             checkboxAction(it)
         }
+    }
+
+    val proceedWithDelete: () -> Unit = {
+        val toDelete = mutableListOf<Long>()
+        toDelete.addAll(selectedIds)
+        predictionViewModel.deleteList(toDelete)
+        selectedIds.removeAll(selectedIds)
+        showDeleteDialog.value = false
+    }
+
+    val proceedWithSync: () -> Unit = {
+        val toSync = mutableListOf<Long>()
+        toSync.addAll(selectedIds)
+        selectedIds.removeAll(selectedIds)
+        showSyncDialog.value = false
+
+        predictionViewModel.updateSyncListStatus(toSync)
+        Log.d("TAG", "Syncing")
+        // Dispatch worker
     }
 
     Scaffold(
@@ -154,20 +170,26 @@ fun SavedPredictionsScreen(
                 backgroundColor = MaterialTheme.colors.primary,
                 contentColor = Color.Black,
                 actions = {
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(
+                        onClick = { if (selectedIds.isNotEmpty()) showSyncDialog.value = true },
+                        enabled = (selectedIds.size > 0)
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.CloudUpload,
                             contentDescription = null,
-                            tint = Color.White
+                            tint = if (selectedIds.size > 0) Color.White else Color(0xAAFFFFFF)
                         )
                     }
-                    IconButton(onClick = {
-                        if (listItems.isNotEmpty()) showDialog.value = true
-                    }) {
+                    IconButton(
+                        onClick = {
+                            if (selectedIds.isNotEmpty()) showDeleteDialog.value = true
+                        },
+                        enabled = (selectedIds.size > 0)
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Delete,
                             contentDescription = null,
-                            tint = Color.White
+                            tint = if (selectedIds.size > 0) Color.White else Color(0xAAFFFFFF)
                         )
                     }
                 }
@@ -212,8 +234,8 @@ fun SavedPredictionsScreen(
                                     .fillMaxWidth()
                                     .padding(end = 16.dp)
                                     .background(MaterialTheme.colors.background),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Row(
                                     modifier = Modifier.clickable(onClick = { selectOrDeselectAll() }),
@@ -234,19 +256,13 @@ fun SavedPredictionsScreen(
                                     }
                                 }
                                 Row {
-                                    if(selectedIds.size == 1){
+                                    if (selectedIds.size == 1) {
                                         Text(text = "${selectedIds.size} item selected")
                                     }
-                                    if(selectedIds.size > 1){
+                                    if (selectedIds.size > 1) {
                                         Text(text = "${selectedIds.size} items selected")
                                     }
                                 }
-                            }
-                        }
-
-                        val listItems2 = mutableListOf<Prediction>().apply {
-                            repeat(24) {
-                                this.addAll(listItems)
                             }
                         }
 
@@ -261,7 +277,7 @@ fun SavedPredictionsScreen(
                                 Divider(
                                     color = Color.LightGray,
                                     thickness = 1.dp,
-                                    modifier = Modifier.padding(PaddingValues(horizontal = 48.dp))
+                                    modifier = Modifier.padding(PaddingValues(horizontal = 52.dp))
                                 )
                         }
                     }
@@ -287,7 +303,13 @@ fun SavedPredictionsScreen(
         }
 
 
-        if (showDialog.value) DeleteAllDialogPresenter(showDialog, predictionViewModel)
+        if (showDeleteDialog.value) {
+            DeleteAllDialogPresenter(showDeleteDialog, onProceedFn = proceedWithDelete)
+        }
+
+        if (showSyncDialog.value) {
+            SyncAllDialogPresenter(showSyncDialog, onProceedFn = proceedWithSync)
+        }
     }
 }
 
@@ -330,73 +352,68 @@ fun NoSavedPredictions() {
     }
 }
 
+
+@Composable
+fun SyncAllDialogPresenter(
+    showSyncDialog: MutableState<Boolean>,
+    onProceedFn: () -> Unit
+) {
+
+    if(showSyncDialog.value){
+        AlertDialog(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            onDismissRequest = { showSyncDialog.value = false },
+            title = { Text(text = "Sync Selected Items") },
+            text = {
+                Column {
+                    Text("Are you sure?")
+                    Text("This will upload all selected items")
+                }
+            },
+
+            confirmButton = {
+                TextButton(onClick = { onProceedFn() }) {
+                    Text(text = "Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSyncDialog.value = false }) {
+                    Text(text = "No")
+                }
+            }
+        )
+    }
+
+}
+
 @Composable
 fun DeleteAllDialogPresenter(
-    showDialog: MutableState<Boolean>,
-    predictionViewModel: PredictionViewModel
+    showDeleteDialog: MutableState<Boolean>,
+    onProceedFn: () -> Unit
 ) {
-    AlertDialog(
-        modifier = Modifier.fillMaxSize(),
-        onDismissRequest = { showDialog.value = false },
-        title = {
-            Text(text = "Delete All Items", modifier = Modifier.height(72.dp))
-        },
-        text = {
-            Column {
-                Text("Are you sure?")
-                Text("This will delete all saved predictions")
-            }
-        },
-        buttons = {
-            Row(
-                modifier = Modifier
-                    .height(72.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Button(
-                    onClick = { showDialog.value = false },
-                    modifier = Modifier
-                        .requiredWidth(160.dp)
-                        .background(MaterialTheme.colors.background)
-                        .border(1.dp, MaterialTheme.colors.primary),
-                    shape = RoundedCornerShape(0),
-                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background),
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 4.dp,
-                        disabledElevation = 0.dp
-                    )
-                ) {
-                    Text(
-                        text = "No, Cancel",
-                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colors.primary
-                    )
+
+    if(showDeleteDialog.value){
+        AlertDialog(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            onDismissRequest = { showDeleteDialog.value = false },
+            title = { Text(text = "Delete Selected Items") },
+            text = {
+                Column {
+                    Text("Are you sure?")
+                    Text("This will delete all selected items")
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Button(
-                    onClick = {
-                        predictionViewModel.deleteAllPredictions()
-                        showDialog.value = false
-                    },
-                    modifier = Modifier.requiredWidth(160.dp),
-                    shape = RoundedCornerShape(0),
-                    elevation = ButtonDefaults.elevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 4.dp,
-                        disabledElevation = 0.dp
-                    )
-                ) {
-                    Text(
-                        text = "Yes, Proceed",
-                        modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+            },
+
+            confirmButton = {
+                TextButton(onClick = { onProceedFn() }) {
+                    Text(text = "Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog.value = false }) {
+                    Text(text = "No")
                 }
             }
-        },
-    )
+        )
+    }
 }

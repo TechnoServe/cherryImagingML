@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.CloudDone
+import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
@@ -98,11 +99,22 @@ fun PredictionCard(
                     text = DateTime(prediction.createdAt).toString(fmt),
                     fontSize = 12.sp
                 )
+//                Text(
+//                    text = "${prediction.id}",
+//                    fontSize = 12.sp
+//                )
                 if(prediction.synced){
                     Icon(
                         Icons.Outlined.CheckCircleOutline,
                         "Uploaded",
                         tint = Color.Green,
+                        modifier = Modifier.size(16.dp).padding(top=2.dp)
+                    )
+                } else if(prediction.scheduledForSync){
+                    Icon(
+                        Icons.Outlined.CloudUpload,
+                        "Uploaded",
+                        tint = Color.Gray,
                         modifier = Modifier.size(16.dp).padding(top=2.dp)
                     )
                 }
