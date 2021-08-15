@@ -78,6 +78,9 @@ fun ProfileScreen(
             // sign-in flow using the back button. Otherwise check
             // response.getError().getErrorCode() and handle the error.
             // ...
+            homeScope.launch {
+                scaffoldState.snackbarHostState.showSnackbar("Login Failed")
+            }
         }
     }
 
@@ -232,15 +235,15 @@ fun Stats(listItems: List<Prediction>, sharedPrefs: Preferences) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier=Modifier.weight(1f)){
-                Stat(title = "Generated\nPredictions", value = sharedPrefs.generatedPredictions.toString())
+                Stat(title = "Generated\nPrediction${if(sharedPrefs.generatedPredictions == 1) "" else "s"}", value = sharedPrefs.generatedPredictions.toString())
             }
             StatDivider()
             Box(modifier=Modifier.weight(1f)){
-                Stat(title = "Saved\nPredictions", value = listItems.size.toString())
+                Stat(title = "Saved\nPrediction${if(listItems.size == 1) "" else "s"}", value = listItems.size.toString())
             }
             StatDivider()
             Box(modifier=Modifier.weight(1f)){
-                Stat(title = "Uploads\n", value = sharedPrefs.uploadedPredictions.toString())
+                Stat(title = "Upload${if(sharedPrefs.uploadedPredictions == 1) "" else "s"}\n", value = sharedPrefs.uploadedPredictions.toString())
             }
         }
     }

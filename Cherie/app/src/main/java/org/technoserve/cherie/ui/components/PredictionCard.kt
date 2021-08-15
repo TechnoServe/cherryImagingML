@@ -91,7 +91,7 @@ fun PredictionCard(
                     .align(Alignment.CenterVertically)
             ) {
                 Text(
-                    text = "Score: ${String.format("%.2f", prediction.ripe)}%",
+                    text = "Ripeness: ${prediction.ripe.toInt()}%",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )

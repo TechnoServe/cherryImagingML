@@ -21,6 +21,7 @@ fun ButtonPrimary(
     onClick: () -> Unit,
     label: String,
     requiredWidth: Dp = 160.dp,
+    enabled: Boolean = true,
     content: @Composable (() -> Unit)? = null
 ){
     Button(
@@ -29,6 +30,7 @@ fun ButtonPrimary(
         },
         modifier = Modifier.requiredWidth(requiredWidth),
         shape = RoundedCornerShape(0),
+        enabled = enabled,
         elevation = ButtonDefaults.elevation(
             defaultElevation = 0.dp,
             pressedElevation = 4.dp,
@@ -53,10 +55,12 @@ fun ButtonSecondary(
     onClick: () -> Unit,
     label: String,
     requiredWidth: Dp = 160.dp,
+    enabled: Boolean = true,
     content: @Composable (() -> Unit)? = null
 ){
     Button(
         onClick = { onClick() },
+        enabled =  enabled,
         modifier = Modifier
             .requiredWidth(requiredWidth)
             .background(MaterialTheme.colors.background)

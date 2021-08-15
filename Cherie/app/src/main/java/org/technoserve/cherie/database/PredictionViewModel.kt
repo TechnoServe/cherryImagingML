@@ -10,12 +10,12 @@ import kotlinx.coroutines.launch
 class PredictionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: PredictionRepository
-    val readAllData: LiveData<List<Prediction>>
+    val readAllData: RefreshableLiveData<List<Prediction>>
 
     init {
         val predictionDAO = AppDatabase.getInstance(application).predictionsDAO()
         repository = PredictionRepository(predictionDAO)
-        readAllData = repository.readAllPredictions
+        readAllData = RefreshableLiveData{repository.readAllPredictions}
     }
 
     fun getSinglePrediction(predictionId: Long): LiveData<List<Prediction>>{

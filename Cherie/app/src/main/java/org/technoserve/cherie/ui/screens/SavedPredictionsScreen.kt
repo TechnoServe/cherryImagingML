@@ -1,5 +1,6 @@
 package org.technoserve.cherie.ui.screens
 
+import android.app.Activity
 import android.app.Application
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,10 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Delete
@@ -35,22 +32,28 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.*
+import com.firebase.ui.auth.AuthUI
+import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
+import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.technoserve.cherie.R
 import org.technoserve.cherie.SavedPredictionActivity
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
-import org.technoserve.cherie.ui.components.ButtonPrimary
-import org.technoserve.cherie.ui.components.ButtonSecondary
+import org.technoserve.cherie.helpers.ImageUtils
+import org.technoserve.cherie.workers.*
 import java.util.*
 import kotlin.concurrent.schedule
 
 const val DELETED = 204
 
+@ExperimentalMaterialApi
 @ExperimentalFoundationApi
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -63,14 +66,20 @@ fun SavedPredictionsScreen(
     val predictionViewModel: PredictionViewModel = viewModel(
         factory = PredictionViewModelFactory(context.applicationContext as Application)
     )
+    val workManager: WorkManager = WorkManager.getInstance(context)
 
     val listItems = predictionViewModel.readAllData.observeAsState(listOf()).value
 
-    var showDeleteDialog = remember { mutableStateOf(false) }
-    var showSyncDialog = remember { mutableStateOf(false) }
+    fun refreshListItems() {
+        // TODO: UPDATE SAVED PREDICTIONS LIST WHEN DB GETS UPDATED
+    }
+
+    val showDeleteDialog = remember { mutableStateOf(false) }
+    val showSyncDialog = remember { mutableStateOf(false) }
+    val showLoginDialog = remember { mutableStateOf(false) }
 
     val loading = remember { mutableStateOf(true) }
-    var previewedPredictions: MutableList<Prediction> = mutableListOf()
+    val previewedPredictions: MutableList<Prediction> = mutableListOf()
 
     Timer().schedule(1200) {
         loading.value = false
@@ -81,9 +90,10 @@ fun SavedPredictionsScreen(
             if (result.resultCode == DELETED) {
                 val id = result.data?.getLongExtra("ID", 0L)
                 homeScope.launch {
-                    val snackbarResult =
-                        scaffoldState.snackbarHostState.showSnackbar("Prediction Deleted", "Undo")
-                    when (snackbarResult) {
+                    when (scaffoldState.snackbarHostState.showSnackbar(
+                        "Prediction Deleted",
+                        "Undo"
+                    )) {
                         SnackbarResult.Dismissed -> {
                             previewedPredictions.removeAll { it.id == id }
                         }
@@ -101,7 +111,6 @@ fun SavedPredictionsScreen(
 
 
     val selectedIds = remember { mutableStateListOf<Long>() }
-
 
     fun selectOrDeselectAll() {
         if (selectedIds.isEmpty()) {
@@ -141,9 +150,29 @@ fun SavedPredictionsScreen(
     val proceedWithDelete: () -> Unit = {
         val toDelete = mutableListOf<Long>()
         toDelete.addAll(selectedIds)
+        previewedPredictions.removeAll(previewedPredictions)
+        previewedPredictions.addAll(listItems.filter { toDelete.contains(it.id) })
         predictionViewModel.deleteList(toDelete)
         selectedIds.removeAll(selectedIds)
         showDeleteDialog.value = false
+
+        homeScope.launch {
+            when (scaffoldState.snackbarHostState.showSnackbar(
+                "${previewedPredictions.size} Items Deleted",
+                "Undo"
+            )) {
+                SnackbarResult.Dismissed -> {
+                    previewedPredictions.removeAll(previewedPredictions)
+                }
+                SnackbarResult.ActionPerformed -> {
+                    // Restore Predictions
+                    previewedPredictions.forEach {
+                        predictionViewModel.addPrediction(it)
+                    }
+
+                }
+            }
+        }
     }
 
     val proceedWithSync: () -> Unit = {
@@ -153,8 +182,98 @@ fun SavedPredictionsScreen(
         showSyncDialog.value = false
 
         predictionViewModel.updateSyncListStatus(toSync)
-        Log.d("TAG", "Syncing")
-        // Dispatch worker
+
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val predictionsToSync = listItems.filter { toSync.contains(it.id) && !it.scheduledForSync }
+        if(predictionsToSync.isNotEmpty()) {
+            GlobalScope.launch {
+                val fileNames = mutableListOf<String>()
+                val imageUris = mutableListOf<String>()
+                val predictionIds = mutableListOf<Long>()
+
+                predictionsToSync.forEach {
+                    val fileName = (userId) + "_" + it.id
+                    val combinedBitmaps = ImageUtils.combineBitmaps(it.inputImage, it.mask)
+                    val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps)
+                    fileNames.add(fileName)
+                    imageUris.add(imageUri.toString())
+                    predictionIds.add(it.id)
+                }
+
+                val workdata = workDataOf(
+                    WORKER_IMAGE_NAMES_KEY to fileNames.toTypedArray(),
+                    WORKER_IMAGE_URIS_KEY to imageUris.toTypedArray(),
+                    WORKER_PREDICTION_IDS_KEY to predictionIds.toTypedArray()
+                )
+
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+
+                val uploadRequest = OneTimeWorkRequestBuilder<UploadWorker>()
+                    .setInputData(workdata)
+                    .addTag("MASS UPLOAD TAG")
+                    .setConstraints(constraints)
+                    .build()
+
+                workManager.beginWith(uploadRequest).enqueue()
+                Log.d("TAG", "Syncing ${predictionsToSync.size} items")
+            }
+        }
+        homeScope.launch {
+            scaffoldState.snackbarHostState.showSnackbar("${predictionsToSync.size} item${if(predictionsToSync.size == 1) "has " else "s have "}been queued for upload")
+        }
+        refreshListItems()
+    }
+
+    fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
+        if (result.resultCode == Activity.RESULT_OK) {
+            val newUser = FirebaseAuth.getInstance().currentUser
+            if (newUser != null) {
+                homeScope.launch {
+                    scaffoldState.snackbarHostState.showSnackbar("Login Successful")
+                }
+            }
+            // ...
+        } else {
+            // Sign in failed. If response is null the user canceled the
+            // sign-in flow using the back button. Otherwise check
+            // response.getError().getErrorCode() and handle the error.
+            // ...
+            homeScope.launch {
+                scaffoldState.snackbarHostState.showSnackbar("Login Failed")
+            }
+        }
+    }
+
+    val signInLauncher =
+        rememberLauncherForActivityResult(FirebaseAuthUIActivityResultContract()) { res ->
+            onSignInResult(res)
+        }
+
+    val initLogin: () -> Unit = {
+        val providers = arrayListOf(
+            AuthUI.IdpConfig.PhoneBuilder().build(),
+            AuthUI.IdpConfig.EmailBuilder().build(),
+        )
+        val signInIntent = AuthUI.getInstance()
+            .createSignInIntentBuilder()
+            .setAvailableProviders(providers)
+            .setLogo(R.drawable.cherie)
+            .setTheme(R.style.LoginTheme)
+            .build()
+        signInLauncher.launch(signInIntent)
+        showLoginDialog.value = false
+    }
+
+    fun onSyncClicked() {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user != null) {
+            showSyncDialog.value = true
+        } else {
+            showLoginDialog.value = true
+        }
     }
 
     Scaffold(
@@ -170,27 +289,56 @@ fun SavedPredictionsScreen(
                 backgroundColor = MaterialTheme.colors.primary,
                 contentColor = Color.Black,
                 actions = {
-                    IconButton(
-                        onClick = { if (selectedIds.isNotEmpty()) showSyncDialog.value = true },
-                        enabled = (selectedIds.size > 0)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.CloudUpload,
-                            contentDescription = null,
-                            tint = if (selectedIds.size > 0) Color.White else Color(0xAAFFFFFF)
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            if (selectedIds.isNotEmpty()) showDeleteDialog.value = true
-                        },
-                        enabled = (selectedIds.size > 0)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = null,
-                            tint = if (selectedIds.size > 0) Color.White else Color(0xAAFFFFFF)
-                        )
+                    if (listItems.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                if (selectedIds.isNotEmpty()) {
+                                    onSyncClicked()
+                                }
+                            },
+                            enabled = (selectedIds.size > 0)
+                        ) {
+                            val toBeSynced = listItems.count { it.scheduledForSync && !it.synced }
+                            if (selectedIds.size == 0 && toBeSynced > 0) {
+                                BadgeBox(
+                                    badgeContent = {
+                                        Text(
+                                            toBeSynced.toString(),
+                                            color = Color.Green
+                                        )
+                                    },
+                                    backgroundColor = Color(0xAA000000)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CloudUpload,
+                                        contentDescription = null,
+                                        tint = if (selectedIds.size > 0) Color.White else Color(
+                                            0xAAFFFFFF
+                                        )
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.CloudUpload,
+                                    contentDescription = null,
+                                    tint = if (selectedIds.size > 0) Color.White else Color(
+                                        0xAAFFFFFF
+                                    )
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = {
+                                if (selectedIds.isNotEmpty()) showDeleteDialog.value = true
+                            },
+                            enabled = (selectedIds.size > 0)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = null,
+                                tint = if (selectedIds.size > 0) Color.White else Color(0xAAFFFFFF)
+                            )
+                        }
                     }
                 }
             )
@@ -310,6 +458,10 @@ fun SavedPredictionsScreen(
         if (showSyncDialog.value) {
             SyncAllDialogPresenter(showSyncDialog, onProceedFn = proceedWithSync)
         }
+
+        if (showLoginDialog.value) {
+            LoginRequiredDialogPresenter(showLoginDialog, onProceedFn = initLogin)
+        }
     }
 }
 
@@ -359,7 +511,7 @@ fun SyncAllDialogPresenter(
     onProceedFn: () -> Unit
 ) {
 
-    if(showSyncDialog.value){
+    if (showSyncDialog.value) {
         AlertDialog(
             modifier = Modifier.padding(horizontal = 32.dp),
             onDismissRequest = { showSyncDialog.value = false },
@@ -392,7 +544,7 @@ fun DeleteAllDialogPresenter(
     onProceedFn: () -> Unit
 ) {
 
-    if(showDeleteDialog.value){
+    if (showDeleteDialog.value) {
         AlertDialog(
             modifier = Modifier.padding(horizontal = 32.dp),
             onDismissRequest = { showDeleteDialog.value = false },
@@ -411,6 +563,38 @@ fun DeleteAllDialogPresenter(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog.value = false }) {
+                    Text(text = "No")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun LoginRequiredDialogPresenter(
+    showLoginRequiredDialog: MutableState<Boolean>,
+    onProceedFn: () -> Unit
+) {
+
+    if (showLoginRequiredDialog.value) {
+        AlertDialog(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            onDismissRequest = { showLoginRequiredDialog.value = false },
+            title = { Text(text = "Login Required") },
+            text = {
+                Column {
+                    Text("You need to have an account to upload images")
+                    Text("Do you want to login now?")
+                }
+            },
+
+            confirmButton = {
+                TextButton(onClick = { onProceedFn() }) {
+                    Text(text = "Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLoginRequiredDialog.value = false }) {
                     Text(text = "No")
                 }
             }

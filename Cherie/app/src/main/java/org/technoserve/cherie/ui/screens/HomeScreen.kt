@@ -32,6 +32,7 @@ fun HomeScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @ExperimentalFoundationApi
 @Composable
 fun Navigation(

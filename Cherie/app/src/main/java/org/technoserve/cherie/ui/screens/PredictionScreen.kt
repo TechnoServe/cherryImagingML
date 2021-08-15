@@ -44,10 +44,7 @@ import kotlin.math.pow
 import android.content.Intent
 
 
-
-
-
-fun distance(col1: IntArray, col2: IntArray): Double{
+fun distance(col1: IntArray, col2: IntArray): Double {
     val (r1, g1, b1) = col1
     val (r2, g2, b2) = col2
     return (r1 - r2 + 0.0).pow(2.0) + (g1 - g2 + 0.0).pow(2.0) + (b1 - b2 + 0.0).pow(2.0)
@@ -65,13 +62,13 @@ enum class ScoreType {
     RIPE, UNDERRIPE, OVERRIPE
 }
 
-fun nearestPixel(col1: IntArray): Int{
+fun nearestPixel(col1: IntArray): Int {
     var idxClosest = 0
     var minDistance = distance(col1, refColors[idxClosest])
 
-    for (i in 1 until refColors.size){
+    for (i in 1 until refColors.size) {
         val currentDistance = distance(col1, refColors[i])
-        if(currentDistance < minDistance){
+        if (currentDistance < minDistance) {
             minDistance = currentDistance
             idxClosest = i
         }
@@ -166,7 +163,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
         }
     }
 
-    fun showStillRunningMessage(){
+    fun showStillRunningMessage() {
         scope.launch {
             scaffoldState.snackbarHostState.showSnackbar("Prediction is currently running")
         }
@@ -174,7 +171,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
 
 
     val onRetry = {
-        if(complete.value){
+        if (complete.value) {
             complete.value = false
             runModel()
         } else {
@@ -183,7 +180,7 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
     }
 
     fun calculateRipenessScore(scoreType: ScoreType = ScoreType.RIPE): Float {
-        return when(scoreType) {
+        return when (scoreType) {
             ScoreType.RIPE -> ((redCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
             ScoreType.UNDERRIPE -> ((greenCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
             ScoreType.OVERRIPE -> ((blueCount + 0f) / (redCount + greenCount + blueCount + 0f)) * 100
@@ -200,42 +197,56 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                 .fillMaxSize()
                 .background(MaterialTheme.colors.background)
                 .wrapContentSize(Alignment.TopCenter)
-                .verticalScroll(scrollState)
                 .padding(top = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Input Image",
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .width(256.dp)
-                    .padding(start = 32.dp, end = 32.dp)
-            )
-
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             if (complete.value) {
-                Image(
-                    bitmap = mask.asImageBitmap(),
-                    contentDescription = "Mask",
-                    contentScale = ContentScale.FillWidth,
+                Column(
                     modifier = Modifier
-                        .width(256.dp)
-                        .padding(start = 32.dp, end = 32.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f),
+                    ) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Input Image",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 32.dp, end = 32.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f),
+                    ) {
+                        Image(
+                            bitmap = mask.asImageBitmap(),
+                            contentDescription = "Mask",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 32.dp, end = 32.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
 
                 Text(
-                    text = "Ripeness score: ${String.format("%.2f", calculateRipenessScore(ScoreType.RIPE))}%",
+                    text = "Ripeness: ${calculateRipenessScore(ScoreType.RIPE).toInt()}%",
                     color = MaterialTheme.colors.onSurface,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     fontSize = 18.sp
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 ButtonPrimary(onClick = {
                     addPrediction(
@@ -250,19 +261,20 @@ fun PredictionScreen(imageAsByteArray: ByteArray) {
                     context.setResult(Activity.RESULT_OK, returnIntent)
                     context.finish()
                 }, label = "Save")
+                Spacer(modifier = Modifier.height(48.dp))
             } else {
-                Column (
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-                )
-                {
-                    Spacer(modifier = Modifier.height(32.dp))
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                     LinearProgressIndicator()
                     Spacer(modifier = Modifier.height(32.dp))
                     Text(
-                        text = "Predicting ripeness score...",
+                        text = "Predicting ripeness...",
                         textAlign = TextAlign.Center
                     )
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }

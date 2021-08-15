@@ -8,7 +8,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
@@ -16,10 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -32,15 +29,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.launch
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
 import org.technoserve.cherie.helpers.ImageUtils
 import org.technoserve.cherie.ui.components.ButtonPrimary
 import org.technoserve.cherie.ui.components.ButtonSecondary
-import org.technoserve.cherie.workers.UploadWorker
-import org.technoserve.cherie.workers.WORKER_IMAGE_NAME_KEY
-import org.technoserve.cherie.workers.WORKER_IMAGE_URI_KEY
+import org.technoserve.cherie.workers.*
 
 
 @Composable
@@ -55,19 +51,31 @@ fun SavedPredictionScreen(predictionId: Long) {
         predictionViewModel.getSinglePrediction(predictionId).observeAsState(listOf()).value
 
     val workManager: WorkManager = WorkManager.getInstance(context)
-    val showDialog = remember { mutableStateOf(false) }
+    val showDeleteDialog = remember { mutableStateOf(false) }
+    val showUploadDialog = remember { mutableStateOf(false) }
+    val hasBeenScheduledForUpload = remember { mutableStateOf(false) }
 
     val user = FirebaseAuth.getInstance().currentUser
 
-    val outputWorkInfoItems: LiveData<List<WorkInfo>>
+    val scaffoldState = rememberScaffoldState()
+    val scope = rememberCoroutineScope()
 
-    fun runUpload(item: Prediction) {
+
+    fun upload(item: Prediction) {
         val fileName = (user?.uid) + "_" + item.id
         val combinedBitmaps = ImageUtils.combineBitmaps(item.inputImage, item.mask)
         val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps)
+
+        val fileNames = mutableListOf(fileName)
+        val imageUris = mutableListOf(imageUri.toString())
+        val predictionIds = mutableListOf(item.id)
+
+        predictionViewModel.updateSyncListStatus(predictionIds)
+
         val workdata = workDataOf(
-            WORKER_IMAGE_NAME_KEY to fileName,
-            WORKER_IMAGE_URI_KEY to imageUri.toString()
+            WORKER_IMAGE_NAMES_KEY to fileNames.toTypedArray(),
+            WORKER_IMAGE_URIS_KEY to imageUris.toTypedArray(),
+            WORKER_PREDICTION_IDS_KEY to predictionIds.toTypedArray()
         )
 
         val constraints = Constraints.Builder()
@@ -77,36 +85,24 @@ fun SavedPredictionScreen(predictionId: Long) {
 
         val uploadRequest = OneTimeWorkRequestBuilder<UploadWorker>()
             .setInputData(workdata)
-            .addTag("UPLOAD TAG")
+            .addTag("SINGLE UPLOAD TAG " + item.id)
             .setConstraints(constraints)
             .build()
 
-        workManager.beginUniqueWork(
-            fileName,
-            ExistingWorkPolicy.KEEP,
-            uploadRequest
-        ).enqueue()
+        workManager.beginWith(uploadRequest).enqueue()
+        hasBeenScheduledForUpload.value = true
+        scope.launch {
+            scaffoldState.snackbarHostState.showSnackbar("Image has been queued for upload")
+        }
     }
 
-    fun upload(item: Prediction) {
-        val fileName = item.id + item.createdAt
-        val storageReference = FirebaseStorage.getInstance().getReference("images/$fileName")
-        val combinedBitmaps = ImageUtils.combineBitmaps(item.inputImage, item.mask)
-        val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps)
-        Log.d("ImageURI", imageUri.toString())
-        //TODO: Update value in RoomDB to synced
-        storageReference.putFile(imageUri).addOnSuccessListener {
-            Log.d("UPLOAD", "Uploaded successfully" + it.uploadSessionUri.toString())
-        }.addOnFailureListener {
-            Log.d("UPLOAD", "Upload Failed")
-        }
-        val workdata = workDataOf(
-            WORKER_IMAGE_NAME_KEY to fileName,
-            WORKER_IMAGE_URI_KEY to imageUri.toString()
-        )
+    val proceedWithSync: (item: Prediction) -> Unit = {
+        upload(it)
+        showUploadDialog.value = false
     }
 
     Scaffold(
+        scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
                 title = {
@@ -144,67 +140,88 @@ fun SavedPredictionScreen(predictionId: Long) {
                     .padding(top = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Image(
-                    bitmap = item.inputImage.asImageBitmap(),
-                    contentDescription = "Input Image",
-                    contentScale = ContentScale.FillWidth,
+                Column(
                     modifier = Modifier
-                        .width(256.dp)
-                        .padding(start = 32.dp, end = 32.dp)
-                )
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f),
+                    ) {
+                        Image(
+                            bitmap = item.inputImage.asImageBitmap(),
+                            contentDescription = "Input Image",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 32.dp, end = 32.dp)
+                        )
+                    }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Image(
-                    bitmap = item.mask.asImageBitmap(),
-                    contentDescription = "Mask",
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .width(256.dp)
-                        .padding(start = 32.dp, end = 32.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .weight(1f),
+                    ) {
+                        Image(
+                            bitmap = item.mask.asImageBitmap(),
+                            contentDescription = "Mask",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 32.dp, end = 32.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
 
                 Text(
-                    text = "Ripeness score: ${String.format("%.2f", item.ripe)}%",
+                    text = "Ripeness: ${item.ripe.toInt()}%",
                     color = MaterialTheme.colors.onSurface,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     fontSize = 18.sp
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 Row(
                     modifier = Modifier
+                        .padding(bottom = 48.dp)
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    ButtonSecondary(
-                        onClick = {
-//                            upload(item)
-                            runUpload(item)
-                        },
-                        label = "Upload"
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    if (!item.scheduledForSync) {
+                        ButtonSecondary(
+                            onClick = {
+                                showUploadDialog.value = true
+                            },
+                            label = "Upload",
+                            enabled = !hasBeenScheduledForUpload.value
                         ) {
-                            Icon(
-                                Icons.Outlined.CloudUpload,
-                                "",
-                                tint = MaterialTheme.colors.primary
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Upload",
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colors.primary
-                            )
+                            Row(
+                                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Outlined.CloudUpload,
+                                    "",
+                                    tint = MaterialTheme.colors.primary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Upload",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colors.primary
+                                )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    ButtonPrimary(onClick = { showDialog.value = true }, label = "Delete") {
+                    ButtonPrimary(onClick = { showDeleteDialog.value = true }, label = "Delete") {
                         Row(
                             modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -219,9 +236,16 @@ fun SavedPredictionScreen(predictionId: Long) {
                         }
                     }
                 }
-
-
-                if (showDialog.value) DeleteDialogPresenter(showDialog, item, predictionViewModel)
+                if (showUploadDialog.value) UploadDialogPresenter(
+                    showUploadDialog,
+                    item,
+                    proceedWithSync
+                )
+                if (showDeleteDialog.value) DeleteDialogPresenter(
+                    showDeleteDialog,
+                    item,
+                    predictionViewModel
+                )
             }
         } else {
             Column(
@@ -241,40 +265,69 @@ fun SavedPredictionScreen(predictionId: Long) {
 }
 
 @Composable
+fun UploadDialogPresenter(
+    showDialog: MutableState<Boolean>,
+    item: Prediction,
+    onProceedFn: (item: Prediction) -> Unit
+) {
+    if (showDialog.value) {
+        AlertDialog(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            onDismissRequest = { showDialog.value = false },
+            title = { Text(text = "Upload Prediction") },
+            text = {
+                Column {
+                    Text("Are you sure?")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog.value = false }) {
+                    Text(text = "No")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onProceedFn(item)
+                }) {
+                    Text(text = "Yes")
+                }
+            },
+        )
+    }
+}
+
+@Composable
 fun DeleteDialogPresenter(
     showDialog: MutableState<Boolean>,
     prediction: Prediction,
     predictionViewModel: PredictionViewModel
 ) {
     val context = LocalContext.current as Activity
-    AlertDialog(
-        onDismissRequest = { showDialog.value = false },
-        title = {
-            Text(text = "Delete Saved Prediction", modifier = Modifier.height(72.dp))
-        },
-        text = {
-            Column {
-                Text("Are you sure?")
-            }
-        },
-        buttons = {
-            Row(
-                modifier = Modifier
-                    .height(72.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                ButtonSecondary(onClick = { showDialog.value = false }, label = "No, Cancel")
-                Spacer(modifier = Modifier.width(16.dp))
-                ButtonPrimary(onClick = {
+    if (showDialog.value) {
+        AlertDialog(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            onDismissRequest = { showDialog.value = false },
+            title = { Text(text = "Delete Prediction") },
+            text = {
+                Column {
+                    Text("Are you sure?")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog.value = false }) {
+                    Text(text = "No")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
                     val returnIntent = Intent()
                     returnIntent.putExtra("ID", prediction.id)
                     predictionViewModel.deletePrediction(prediction)
                     showDialog.value = false
                     context.setResult(DELETED, returnIntent)
                     context.finish()
-                }, label = "Yes, Proceed")
-            }
-        },
-    )
+                }) { Text(text = "Yes") }
+            },
+        )
+    }
 }
