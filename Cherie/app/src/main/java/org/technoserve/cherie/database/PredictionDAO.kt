@@ -17,6 +17,10 @@ interface PredictionDAO {
     @Query("SELECT * FROM Predictions WHERE id = :id ORDER BY id DESC")
     fun getPredictionById(id: Long) : LiveData<List<Prediction>>
 
+    @Transaction
+    @Query("SELECT * FROM Predictions WHERE id = :id ORDER BY id DESC")
+    fun getRawPredictionById(id: Long) : List<Prediction>
+
     @Update
     suspend fun update(prediction: Prediction)
 

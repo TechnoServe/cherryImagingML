@@ -222,7 +222,7 @@ fun SavedPredictionsScreen(
             }
         }
         homeScope.launch {
-            scaffoldState.snackbarHostState.showSnackbar("${predictionsToSync.size} item${if(predictionsToSync.size == 1) "has " else "s have "}been queued for upload")
+            scaffoldState.snackbarHostState.showSnackbar("${predictionsToSync.size} item${if(predictionsToSync.size == 1) " has " else "s have "}been queued for upload")
         }
         refreshListItems()
     }

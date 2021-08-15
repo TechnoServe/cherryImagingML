@@ -1,6 +1,5 @@
 package org.technoserve.cherie.workers
 
-import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.util.Log
@@ -16,10 +15,14 @@ import android.app.NotificationManager
 import android.app.NotificationChannel
 import android.os.Build
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.technoserve.cherie.Preferences
 import org.technoserve.cherie.database.AppDatabase
+
+const val TAG = "TAG"
 
 const val WORKER_IMAGE_NAMES_KEY = "WORKER_IMAGE_NAMES_KEY"
 const val WORKER_IMAGE_URIS_KEY = "WORKER_IMAGE_URIS_KEY"
@@ -28,7 +31,8 @@ const val WORKER_PREDICTION_IDS_KEY = "WORKER_PREDICTION_IDS_KEY"
 class UploadWorker(appContext: Context, workerParams: WorkerParameters):
     Worker(appContext, workerParams) {
 
-    val sharedPrefs = Preferences(applicationContext)
+    private val sharedPrefs = Preferences(applicationContext)
+    private val db = Firebase.firestore
 
     override fun doWork(): Result {
 
@@ -61,6 +65,42 @@ class UploadWorker(appContext: Context, workerParams: WorkerParameters):
                     if(successfulUploads == fileNames.size){
                         displayNotification("Image Sync Complete", "${fileNames.size} images uploaded successfully")
                     }
+
+                    storageReference.downloadUrl.addOnCompleteListener { it2 ->
+                        if(predictionId != null && it2.isSuccessful){
+
+                            Log.d("TAG", "Uploaded" + it2.result.toString())
+
+                            GlobalScope.launch {
+
+                                val predictions = predictionDAO.getRawPredictionById(predictionId)
+                                val prediction = predictions[0]
+
+                                val payload = hashMapOf(
+                                    "predictionId" to predictionId,
+                                    "imageUri" to it2.result.toString(),
+                                    "ripe" to prediction.ripe,
+                                    "underripe" to prediction.underripe,
+                                    "overripe" to prediction.overripe,
+                                    "predictedAt" to prediction.createdAt,
+                                )
+
+                                db.collection("users/$userId/predictions")
+                                    .add(payload)
+                                    .addOnSuccessListener { documentReference ->
+                                        Log.d(
+                                            TAG,
+                                            "DocumentSnapshot added with ID: ${documentReference.id}"
+                                        )
+                                    }
+                                    .addOnFailureListener { e ->
+                                        Log.w(TAG, "Error adding document", e)
+                                    }
+                            }
+                        }
+
+                    }
+
                 }.addOnFailureListener {
                     Log.d("UPLOAD", "Upload Failed")
                     if(!failedOnce) {
