@@ -39,21 +39,35 @@ import java.io.File
 import java.io.IOException
 import android.graphics.*
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageView
 import com.canhub.cropper.options
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.technoserve.cherie.PredictionActivity
+import org.technoserve.cherie.ui.components.ButtonPrimary
+import org.technoserve.cherie.ui.navigation.NavigationItem
 import java.io.ByteArrayOutputStream
 
 
 @Composable
-fun InferenceScreen() {
+fun InferenceScreen(
+    navController: NavController,
+    scaffoldState: ScaffoldState,
+    homeScope: CoroutineScope
+) {
     val imageUri = remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
     val currentPhotoPath = remember { mutableStateOf("") }
+    val dialogIsVisible = remember { mutableStateOf(false) }
 
     @Throws(IOException::class)
     fun createImageFile(): File {
@@ -76,8 +90,12 @@ fun InferenceScreen() {
             bitmap.value = BitmapFactory.decodeStream(imageUri.value?.let {
                 uriContent?.let { it1 -> context?.contentResolver?.openInputStream(it1) }
             })
+            dialogIsVisible.value = true
         } else {
             val exception = result.error
+            homeScope.launch {
+                scaffoldState.snackbarHostState.showSnackbar("Error: Something went wrong")
+            }
             Log.d("CHERIE@CROP", "Error : ${exception?.localizedMessage}")
         }
     }
@@ -94,6 +112,7 @@ fun InferenceScreen() {
                 setMinCropResultSize(512, 512)
                 setOutputCompressQuality(80)
                 setOutputCompressFormat(Bitmap.CompressFormat.JPEG)
+                setCropMenuCropButtonIcon(R.drawable.done)
             }
         )
     }
@@ -144,11 +163,41 @@ fun InferenceScreen() {
     }
 
     val dismissDialog: () -> Unit = {
-        // Wipe state
-        imageUri.value = null
-        bitmap.value = null
-        currentPhotoPath.value = ""
+        val backToCrop = false
+        if(backToCrop){
+            // Alternate flow - Take user back to Crop Modal
+            startCrop()
+            dialogIsVisible.value = false
+        } else {
+            // Wipe state
+            imageUri.value = null
+            bitmap.value = null
+            currentPhotoPath.value = ""
+
+            dialogIsVisible.value = false
+        }
     }
+
+    val runPrediction =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                homeScope.launch {
+                    scaffoldState.snackbarHostState.showSnackbar("Saved Successfully")
+                }
+                navController.navigate(NavigationItem.Logs.route) {
+                    navController.graph.startDestinationRoute?.let { route ->
+                        popUpTo(route) {
+                            saveState = true
+                        }
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+                Log.d("TAG", "Got result OK - Saving Prediction")
+            } else {
+                Log.d("TAG", "Back button was pressed - Save Cancelled")
+            }
+        }
 
     val proceedToPredictionScreen: () -> Unit = {
 
@@ -157,9 +206,7 @@ fun InferenceScreen() {
         val imgAsByteArray: ByteArray = stream.toByteArray()
 
         val intent = PredictionActivity.newIntent(context, imgAsByteArray)
-        // Image from camera is too large and crashes the when the next line is run
-        // The Binder transaction buffer has a limited fixed size of 1Mb
-        context.startActivity(intent)
+        runPrediction.launch(intent)
 
         dismissDialog()
     }
@@ -170,14 +217,17 @@ fun InferenceScreen() {
             .fillMaxWidth()
             .background(color = MaterialTheme.colors.primary)
     ) {
-        HeaderWithIcon()
-        RowLayout(loadFromGallery, launchCamera)
+        Box(modifier = Modifier.weight(1f)) {
+            HeaderWithIcon()
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            RowLayout(loadFromGallery, launchCamera)
+        }
         bitmap.value?.let {
-            FullScreenDialog(bitmap.value != null, it, dismissDialog, proceedToPredictionScreen)
+            FullScreenDialog(dialogIsVisible.value, it, dismissDialog, proceedToPredictionScreen)
         }
     }
 }
-
 
 
 @Composable
@@ -210,7 +260,6 @@ fun HeaderWithIcon() {
 }
 
 
-
 @Composable
 fun FullScreenDialog(
     showDialog: Boolean,
@@ -228,29 +277,16 @@ fun FullScreenDialog(
                 Box(
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(32.dp)
-                    ) {
-                        FloatingActionButton(
-                            contentColor = MaterialTheme.colors.onSurface,
-                            backgroundColor = Color.White,
-                            onClick = { onClose() }
-                        ) {
-                            Icon(Icons.Outlined.Close, "", tint = Color.Black)
-                        }
-                    }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "Proceed with prediction?",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 25.sp,
-                            color = MaterialTheme.colors.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(32.dp))
+//                        Text(
+//                            text = "Proceed with prediction?",
+//                            fontWeight = FontWeight.Bold,
+//                            fontSize = 25.sp,
+//                            color = MaterialTheme.colors.onSurface,
+//                        )
+//                        Spacer(modifier = Modifier.height(32.dp))
                         Image(
                             bitmap = image.asImageBitmap(),
                             contentDescription = null,
@@ -264,46 +300,36 @@ fun FullScreenDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 36.dp),
+                            .padding(bottom = 72.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Button(
+                        val tint =
+                            if (isSystemInDarkTheme()) Color.White else MaterialTheme.colors.primary
+                        IconButton(
                             onClick = { onClose() },
-                            modifier = Modifier
-                                .requiredWidth(160.dp)
-                                .background(MaterialTheme.colors.background)
-                                .border(1.dp, MaterialTheme.colors.primary),
-                            shape = RoundedCornerShape(0),
-                            colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.background),
-                            elevation = ButtonDefaults.elevation(
-                                defaultElevation = 0.dp,
-                                pressedElevation = 4.dp,
-                                disabledElevation = 0.dp
-                            )
+                            modifier = Modifier.requiredWidth(160.dp),
                         ) {
-                            Text(
-                                text = "No, Cancel",
-                                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colors.primary
+                            Icon(
+                                Icons.Filled.Replay,
+                                contentDescription = "retake",
+                                tint = tint,
+                                modifier = Modifier
+                                    .width(48.dp)
+                                    .height(48.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(16.dp))
-                        Button(
+                        IconButton(
                             onClick = { onConfirm() },
                             modifier = Modifier.requiredWidth(160.dp),
-                            shape = RoundedCornerShape(0),
-                            elevation = ButtonDefaults.elevation(
-                                defaultElevation = 0.dp,
-                                pressedElevation = 4.dp,
-                                disabledElevation = 0.dp
-                            )
                         ) {
-                            Text(
-                                text = "Yes, Proceed",
-                                modifier = Modifier.padding(12.dp, 4.dp, 12.dp, 4.dp),
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                            Icon(
+                                Icons.Filled.Done,
+                                contentDescription = "Use this Image",
+                                tint = tint,
+                                modifier = Modifier
+                                    .width(48.dp)
+                                    .height(48.dp)
                             )
                         }
                     }
@@ -324,7 +350,7 @@ fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
             .background(color = MaterialTheme.colors.background),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(modifier = Modifier.height(64.dp))
+        Spacer(modifier = Modifier.height(48.dp))
         Text(
             text = "Capture Image For Prediction",
             color = MaterialTheme.colors.onSurface,
@@ -335,7 +361,7 @@ fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight()
-                .padding(start = 32.dp, top = 48.dp, end = 32.dp, bottom = 80.dp),
+                .padding(start = 32.dp, top = 48.dp, end = 32.dp),
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -355,7 +381,10 @@ fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
                     Icon(Icons.Outlined.PhotoCamera, "", tint = MaterialTheme.colors.primary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Take picture", color = MaterialTheme.colors.onSurface)
+                Text(
+                    text = "Take picture",
+                    color = MaterialTheme.colors.onSurface
+                )
             }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

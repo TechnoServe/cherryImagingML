@@ -9,7 +9,7 @@ import org.technoserve.cherie.database.converters.BitmapConverter
 import org.technoserve.cherie.database.converters.DateConverter
 
 
-@Database(entities = [Prediction::class], version = 1, exportSchema = true)
+@Database(entities = [Prediction::class], version = 4, exportSchema = true)
 @TypeConverters(BitmapConverter::class, DateConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 

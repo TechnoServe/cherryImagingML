@@ -3,18 +3,19 @@ package org.technoserve.cherie.database
 
 import android.app.Application
 import androidx.lifecycle.*
+import androidx.room.Query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class PredictionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: PredictionRepository
-    val readAllData: LiveData<List<Prediction>>
+    val readAllData: RefreshableLiveData<List<Prediction>>
 
     init {
         val predictionDAO = AppDatabase.getInstance(application).predictionsDAO()
         repository = PredictionRepository(predictionDAO)
-        readAllData = repository.readAllPredictions
+        readAllData = RefreshableLiveData{repository.readAllPredictions}
     }
 
     fun getSinglePrediction(predictionId: Long): LiveData<List<Prediction>>{
@@ -42,6 +43,24 @@ class PredictionViewModel(application: Application) : AndroidViewModel(applicati
     fun deleteAllPredictions() {
         viewModelScope.launch(Dispatchers.IO) {
             repository.deleteAllPredictions()
+        }
+    }
+
+    fun updateSyncStatus(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateSyncStatus(id)
+        }
+    }
+
+    fun updateSyncListStatus(ids: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateSyncListStatus(ids)
+        }
+    }
+
+    fun deleteList(ids: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteList(ids)
         }
     }
 }

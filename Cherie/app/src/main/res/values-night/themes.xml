@@ -3,6 +3,7 @@
     <style name="Theme.Cherie" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorPrimaryDark">@color/primaryDarkColor</item>
         <item name="colorPrimaryVariant">@color/primaryDarkColor</item>
         <item name="colorOnPrimary">@color/primaryTextColor</item>
         <!-- Secondary brand color. -->
@@ -13,6 +14,7 @@
         <item name="android:statusBarColor" tools:targetApi="l">@color/primaryDarkColor</item>
         <!-- Customize your theme here. -->
         <item name="android:dialogTheme">@style/Theme.DialogFullScreen</item>
+
     </style>
 
     <style name="Theme.Cherie.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
@@ -21,4 +23,14 @@
         <item name="android:windowMinWidthMajor">100%</item>
         <item name="android:windowMinWidthMinor">100%</item>
     </style>
+
+    <style name="SplashTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background_dark</item>
+        <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorPrimaryDark">@color/primaryDarkColor</item>
+        <item name="colorAccent">@color/primaryDarkColor</item>
+        <item name="android:statusBarColor">@color/primaryDarkColor</item>
+    </style>
+
+
 </resources>

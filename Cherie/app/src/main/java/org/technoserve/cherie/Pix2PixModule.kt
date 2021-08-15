@@ -7,6 +7,7 @@ import org.pytorch.Module
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import kotlin.system.measureTimeMillis
 
 
 @Throws(IOException::class)
@@ -33,13 +34,16 @@ object Pix2PixModule {
     var mModule: Module? = null
 
     fun loadModel(context: Context) {
-        if(mModule == null){
-            try {
-                mModule = LiteModuleLoader.load(assetFilePath(context, "pix2pix_benchmark.ptl"))
-            } catch (e: IOException) {
-                Log.e("Cherie", "Error reading assets", e)
+        val time = measureTimeMillis {
+            if(mModule == null){
+                try {
+                    mModule = LiteModuleLoader.load(assetFilePath(context, "pix2pix_benchmark.ptl"))
+                } catch (e: IOException) {
+                    Log.e("Cherie", "Error reading assets", e)
+                }
             }
         }
+        Log.d("MODEL LOADED", time.toString())
     }
 
 }

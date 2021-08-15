@@ -21,16 +21,19 @@ data class Prediction(
     val mask: Bitmap,
 
     @ColumnInfo(name = "ripe")
-    val ripe: String,
+    val ripe: Float,
 
     @ColumnInfo(name = "overripe")
-    val overripe: String,
+    val overripe: Float,
 
     @ColumnInfo(name = "underripe")
-    val underripe: String,
+    val underripe: Float,
 
     @ColumnInfo(name = "synced")
     val synced: Boolean = false,
+
+    @ColumnInfo(name = "scheduledForSync")
+    val scheduledForSync: Boolean = false,
 
     @ColumnInfo(name = "createdAt")
     @TypeConverters(DateConverter::class)
@@ -39,6 +42,7 @@ data class Prediction(
     @PrimaryKey(autoGenerate = true)
     @NonNull
     var id: Long = 0L
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
