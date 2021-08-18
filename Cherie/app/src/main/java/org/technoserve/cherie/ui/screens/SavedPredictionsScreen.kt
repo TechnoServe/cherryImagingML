@@ -12,13 +12,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.CloudUpload
@@ -26,13 +23,17 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.work.*
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
@@ -47,7 +48,11 @@ import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
 import org.technoserve.cherie.helpers.ImageUtils
-import org.technoserve.cherie.workers.*
+import org.technoserve.cherie.ui.navigation.NavigationItem
+import org.technoserve.cherie.workers.UploadWorker
+import org.technoserve.cherie.workers.WORKER_IMAGE_NAMES_KEY
+import org.technoserve.cherie.workers.WORKER_IMAGE_URIS_KEY
+import org.technoserve.cherie.workers.WORKER_PREDICTION_IDS_KEY
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -59,7 +64,8 @@ const val DELETED = 204
 @Composable
 fun SavedPredictionsScreen(
     scaffoldState: ScaffoldState,
-    homeScope: CoroutineScope
+    homeScope: CoroutineScope,
+    navController: NavController
 ) {
 
     val context = LocalContext.current
@@ -67,11 +73,22 @@ fun SavedPredictionsScreen(
         factory = PredictionViewModelFactory(context.applicationContext as Application)
     )
     val workManager: WorkManager = WorkManager.getInstance(context)
-
-    val listItems = predictionViewModel.readAllData.observeAsState(listOf()).value
+    // TODO: Remove listOf initial value so livedata starts out as null
+    val listItems by predictionViewModel.readAllData.observeAsState(listOf())
 
     fun refreshListItems() {
-        // TODO: UPDATE SAVED PREDICTIONS LIST WHEN DB GETS UPDATED
+        // TODO: update saved predictions list when db gets updated
+        //  currently using a terrible makeshift solution
+        navController.navigate(NavigationItem.Inference.route)
+        navController.navigate(NavigationItem.Logs.route) {
+            navController.graph.startDestinationRoute?.let { route ->
+                popUpTo(route) {
+                    saveState = true
+                }
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
 
     val showDeleteDialog = remember { mutableStateOf(false) }
