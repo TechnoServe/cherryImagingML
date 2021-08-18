@@ -28,7 +28,7 @@ const val WORKER_IMAGE_NAMES_KEY = "WORKER_IMAGE_NAMES_KEY"
 const val WORKER_IMAGE_URIS_KEY = "WORKER_IMAGE_URIS_KEY"
 const val WORKER_PREDICTION_IDS_KEY = "WORKER_PREDICTION_IDS_KEY"
 
-class UploadWorker(appContext: Context, workerParams: WorkerParameters):
+class UploadWorker(appContext: Context, workerParams: WorkerParameters) :
     Worker(appContext, workerParams) {
 
     private val sharedPrefs = Preferences(applicationContext)
@@ -45,14 +45,18 @@ class UploadWorker(appContext: Context, workerParams: WorkerParameters):
         val predictionIds = inputData.getLongArray(WORKER_PREDICTION_IDS_KEY)
 
         if (fileNames != null) {
-            displayNotification("Starting Upload", "${fileNames.size} will be uploaded in the background")
+            displayNotification(
+                "Starting Upload",
+                "${fileNames.size} will be uploaded in the background"
+            )
             var successfulUploads = 0
             var failedOnce = false
-            for(i in fileNames.indices){
+            for (i in fileNames.indices) {
                 val fileName = fileNames[i]
                 val imageUri = Uri.parse(imageUris?.get(i))
                 val predictionId = predictionIds?.get(i)
-                val storageReference = FirebaseStorage.getInstance().getReference("images/$fileName")
+                val storageReference =
+                    FirebaseStorage.getInstance().getReference("images/$fileName")
                 storageReference.putFile(imageUri).addOnSuccessListener {
                     Log.d("UPLOAD", "Uploaded successfully" + it.uploadSessionUri.toString())
                     GlobalScope.launch {
@@ -62,12 +66,15 @@ class UploadWorker(appContext: Context, workerParams: WorkerParameters):
                     }
                     successfulUploads++
                     sharedPrefs.uploadedPredictions++
-                    if(successfulUploads == fileNames.size){
-                        displayNotification("Image Sync Complete", "${fileNames.size} images uploaded successfully")
+                    if (successfulUploads == fileNames.size) {
+                        displayNotification(
+                            "Image Sync Complete",
+                            "${fileNames.size} images uploaded successfully"
+                        )
                     }
 
                     storageReference.downloadUrl.addOnCompleteListener { it2 ->
-                        if(predictionId != null && it2.isSuccessful){
+                        if (predictionId != null && it2.isSuccessful) {
 
                             Log.d("TAG", "Uploaded" + it2.result.toString())
 
@@ -103,7 +110,7 @@ class UploadWorker(appContext: Context, workerParams: WorkerParameters):
 
                 }.addOnFailureListener {
                     Log.d("UPLOAD", "Upload Failed")
-                    if(!failedOnce) {
+                    if (!failedOnce) {
                         displayNotification("Image Sync Failed", "Retrying...")
                         failedOnce = true
                     }

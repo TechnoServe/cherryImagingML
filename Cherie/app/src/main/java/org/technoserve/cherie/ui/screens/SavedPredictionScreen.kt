@@ -3,7 +3,7 @@ package org.technoserve.cherie.ui.screens
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
-import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -24,12 +24,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.*
+import com.firebase.ui.auth.AuthUI
+import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
+import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
+import org.technoserve.cherie.R
 import org.technoserve.cherie.database.Prediction
 import org.technoserve.cherie.database.PredictionViewModel
 import org.technoserve.cherie.database.PredictionViewModelFactory
@@ -55,11 +57,50 @@ fun SavedPredictionScreen(predictionId: Long) {
     val showUploadDialog = remember { mutableStateOf(false) }
     val hasBeenScheduledForUpload = remember { mutableStateOf(false) }
 
-    val user = FirebaseAuth.getInstance().currentUser
+    var user = FirebaseAuth.getInstance().currentUser
 
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
 
+    fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
+        if (result.resultCode == Activity.RESULT_OK) {
+            val newUser = FirebaseAuth.getInstance().currentUser
+            user = newUser
+            if (newUser != null) {
+                scope.launch {
+                    scaffoldState.snackbarHostState.showSnackbar("Login Successful")
+                }
+            }
+            // ...
+        } else {
+            // Sign in failed. If response is null the user canceled the
+            // sign-in flow using the back button. Otherwise check
+            // response.getError().getErrorCode() and handle the error.
+            // ...
+            scope.launch {
+                scaffoldState.snackbarHostState.showSnackbar("Login Failed")
+            }
+        }
+    }
+
+    val signInLauncher =
+        rememberLauncherForActivityResult(FirebaseAuthUIActivityResultContract()) { res ->
+            onSignInResult(res)
+        }
+
+    val initLogin: () -> Unit = {
+        val providers = arrayListOf(
+            AuthUI.IdpConfig.PhoneBuilder().build(),
+            AuthUI.IdpConfig.EmailBuilder().build(),
+        )
+        val signInIntent = AuthUI.getInstance()
+            .createSignInIntentBuilder()
+            .setAvailableProviders(providers)
+            .setLogo(R.drawable.cherie)
+            .setTheme(R.style.LoginTheme)
+            .build()
+        signInLauncher.launch(signInIntent)
+    }
 
     fun upload(item: Prediction) {
         val fileName = (user?.uid) + "_" + item.id
@@ -99,6 +140,26 @@ fun SavedPredictionScreen(predictionId: Long) {
     val proceedWithSync: (item: Prediction) -> Unit = {
         upload(it)
         showUploadDialog.value = false
+    }
+
+    val onClickUpload: () -> Unit = {
+        if (user == null) {
+            scope.launch {
+                when (scaffoldState.snackbarHostState.showSnackbar(
+                    "You need to have an account to upload images",
+                    "Login",
+                )) {
+                    SnackbarResult.Dismissed -> {
+
+                    }
+                    SnackbarResult.ActionPerformed -> {
+                        initLogin()
+                    }
+                }
+            }
+        } else {
+            showUploadDialog.value = true
+        }
     }
 
     Scaffold(
@@ -197,7 +258,7 @@ fun SavedPredictionScreen(predictionId: Long) {
                     if (!item.scheduledForSync) {
                         ButtonSecondary(
                             onClick = {
-                                showUploadDialog.value = true
+                                onClickUpload()
                             },
                             label = "Upload",
                             enabled = !hasBeenScheduledForUpload.value

@@ -40,7 +40,7 @@ fun Navigation(
     scaffoldState: ScaffoldState,
     homeScope: CoroutineScope
 ) {
-    NavHost(navController, startDestination = NavigationItem.Logs.route) {
+    NavHost(navController, startDestination = NavigationItem.Inference.route) {
         composable(NavigationItem.Inference.route) {
             InferenceScreen(
                 navController = navController,
@@ -51,7 +51,8 @@ fun Navigation(
         composable(NavigationItem.Logs.route) {
             SavedPredictionsScreen(
                 scaffoldState = scaffoldState,
-                homeScope = homeScope
+                homeScope = homeScope,
+                navController = navController
             )
         }
         composable(NavigationItem.Profile.route) {
