@@ -72,42 +72,42 @@ class UploadWorker(appContext: Context, workerParams: WorkerParameters) :
                             "${fileNames.size} images uploaded successfully"
                         )
                     }
+                    GlobalScope.launch {
+                        val predictions =
+                            predictionId?.let { predictionDAO.getRawPredictionById(it) }
+                        if (predictions != null && predictions.isNotEmpty()) {
+                            val prediction = predictions[0]
 
-                    storageReference.downloadUrl.addOnCompleteListener { it2 ->
-                        if (predictionId != null && it2.isSuccessful) {
+                            storageReference.downloadUrl.addOnCompleteListener { it2 ->
+                                if (it2.isSuccessful) {
 
-                            Log.d("TAG", "Uploaded" + it2.result.toString())
+                                    Log.d("TAG", "Uploaded" + it2.result.toString())
 
-                            GlobalScope.launch {
 
-                                val predictions = predictionDAO.getRawPredictionById(predictionId)
-                                val prediction = predictions[0]
+                                    val payload = hashMapOf(
+                                        "predictionId" to predictionId,
+                                        "imageUri" to it2.result.toString(),
+                                        "ripe" to prediction.ripe,
+                                        "underripe" to prediction.underripe,
+                                        "overripe" to prediction.overripe,
+                                        "predictedAt" to prediction.createdAt,
+                                    )
 
-                                val payload = hashMapOf(
-                                    "predictionId" to predictionId,
-                                    "imageUri" to it2.result.toString(),
-                                    "ripe" to prediction.ripe,
-                                    "underripe" to prediction.underripe,
-                                    "overripe" to prediction.overripe,
-                                    "predictedAt" to prediction.createdAt,
-                                )
-
-                                db.collection("users/$userId/predictions")
-                                    .add(payload)
-                                    .addOnSuccessListener { documentReference ->
-                                        Log.d(
-                                            TAG,
-                                            "DocumentSnapshot added with ID: ${documentReference.id}"
-                                        )
-                                    }
-                                    .addOnFailureListener { e ->
-                                        Log.w(TAG, "Error adding document", e)
-                                    }
+                                    db.collection("users/$userId/predictions")
+                                        .add(payload)
+                                        .addOnSuccessListener { documentReference ->
+                                            Log.d(
+                                                TAG,
+                                                "DocumentSnapshot added with ID: ${documentReference.id}"
+                                            )
+                                        }
+                                        .addOnFailureListener { e ->
+                                            Log.w(TAG, "Error adding document", e)
+                                        }
+                                }
                             }
                         }
-
                     }
-
                 }.addOnFailureListener {
                     Log.d("UPLOAD", "Upload Failed")
                     if (!failedOnce) {
