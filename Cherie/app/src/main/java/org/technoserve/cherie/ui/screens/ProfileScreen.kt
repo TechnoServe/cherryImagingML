@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -178,6 +179,10 @@ fun UserInfo(user: FirebaseUser) {
         if(user.phoneNumber != null){
             Text("Phone: " + user.phoneNumber)
         }
+        Text(
+            text = "Region: " + stringResource(id = R.string.app_region),
+            fontSize = 12.sp
+        )
         Text(
             text = "Last Sign In: " + DateTime(user.metadata?.lastSignInTimestamp).toString(fmt),
             fontSize = 12.sp
