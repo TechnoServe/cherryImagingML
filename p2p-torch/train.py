@@ -6,6 +6,7 @@ import torch.optim as optim
 import config
 from dataset import MapDataset
 from generator_model import Generator
+from generator_resnet import MobileResnetGenerator
 from discriminator_model import Discriminator
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -61,7 +62,8 @@ def train_fn(
 
 def main():
     disc = Discriminator(in_channels=3).to(config.DEVICE)
-    gen = Generator(in_channels=3, features=16).to(config.DEVICE)
+    # gen = Generator(in_channels=3, features=64).to(config.DEVICE)
+    gen = MobileResnetGenerator(3, 3, 64).to(config.DEVICE)
     opt_disc = optim.Adam(disc.parameters(), lr=config.LEARNING_RATE, betas=(0.5, 0.999), )
     opt_gen = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE, betas=(0.5, 0.999))
     BCE = nn.BCEWithLogitsLoss()
@@ -108,7 +110,7 @@ def main():
             save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
 
             gen.eval()
-            torch.save(gen, config.MODEL_PATH + "_" + str(epoch) + ".pt")
+            torch.save(gen, config.MODEL_PATH + str(epoch) + ".pt")
             gen.train()
 
         x, y, y_fake = save_some_examples(gen, val_loader, epoch, folder=config.BASE_PATH + "evaluation")
