@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,12 +36,12 @@ import org.technoserve.cherie.R
 import java.io.File
 import java.io.IOException
 import android.graphics.*
-import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.runtime.MutableState
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.canhub.cropper.CropImageContract
@@ -52,7 +50,6 @@ import com.canhub.cropper.options
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.technoserve.cherie.PredictionActivity
-import org.technoserve.cherie.ui.components.ButtonPrimary
 import org.technoserve.cherie.ui.navigation.NavigationItem
 import java.io.ByteArrayOutputStream
 
@@ -68,6 +65,7 @@ fun InferenceScreen(
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
     val currentPhotoPath = remember { mutableStateOf("") }
     val dialogIsVisible = remember { mutableStateOf(false) }
+    val showHelpDialog = remember { mutableStateOf(false) }
 
     @Throws(IOException::class)
     fun createImageFile(): File {
@@ -88,7 +86,7 @@ fun InferenceScreen(
         if (result.isSuccessful) {
             val uriContent: Uri? = result.uriContent
             bitmap.value = BitmapFactory.decodeStream(imageUri.value?.let {
-                uriContent?.let { it1 -> context?.contentResolver?.openInputStream(it1) }
+                uriContent?.let { it1 -> context.contentResolver?.openInputStream(it1) }
             })
             dialogIsVisible.value = true
         } else {
@@ -164,7 +162,7 @@ fun InferenceScreen(
 
     val dismissDialog: () -> Unit = {
         val backToCrop = false
-        if(backToCrop){
+        if (backToCrop) {
             // Alternate flow - Take user back to Crop Modal
             startCrop()
             dialogIsVisible.value = false
@@ -218,7 +216,7 @@ fun InferenceScreen(
             .background(color = MaterialTheme.colors.primary)
     ) {
         Box(modifier = Modifier.weight(1f)) {
-            HeaderWithIcon()
+            HeaderWithIcon(showHelpDialog)
         }
         Box(modifier = Modifier.weight(1f)) {
             RowLayout(loadFromGallery, launchCamera)
@@ -226,16 +224,37 @@ fun InferenceScreen(
         bitmap.value?.let {
             FullScreenDialog(dialogIsVisible.value, it, dismissDialog, proceedToPredictionScreen)
         }
+        if (showHelpDialog.value) {
+            HelpDialog(showHelpDialog)
+        }
     }
 }
 
 
 @Composable
-fun HeaderWithIcon() {
+fun HeaderWithIcon(
+    showHelpDialog: MutableState<Boolean>
+) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxWidth(),
     ) {
+        IconButton(
+            onClick = { showHelpDialog.value = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 16.dp, end = 16.dp)
+        ) {
+            Icon(
+                Icons.Outlined.Help,
+                contentDescription = "info",
+                tint = Color.White,
+                modifier = Modifier
+                    .alpha(0.8f)
+                    .width(32.dp)
+                    .height(32.dp)
+            )
+        }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -259,6 +278,74 @@ fun HeaderWithIcon() {
     }
 }
 
+
+@Composable
+fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp))
+            .background(color = MaterialTheme.colors.background),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(48.dp))
+        Text(
+            text = "Capture Image For Prediction",
+            color = MaterialTheme.colors.onSurface,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(start = 32.dp, top = 48.dp, end = 32.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            val haptic = LocalHapticFeedback.current
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f)
+            ) {
+                FloatingActionButton(
+                    contentColor = MaterialTheme.colors.onSurface,
+                    backgroundColor = Color.White,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        launchCamera()
+                    }
+                ) {
+                    Icon(Icons.Outlined.PhotoCamera, "", tint = MaterialTheme.colors.primary)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Take picture",
+                    color = MaterialTheme.colors.onSurface
+                )
+            }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f)
+            ) {
+                FloatingActionButton(
+                    contentColor = MaterialTheme.colors.onSurface,
+                    backgroundColor = Color.White,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        loadFromGallery()
+                    }
+                ) {
+                    Icon(Icons.Outlined.Image, "", tint = Color.Blue)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Load from gallery", color = MaterialTheme.colors.onSurface)
+            }
+
+        }
+    }
+}
 
 @Composable
 fun FullScreenDialog(
@@ -341,69 +428,33 @@ fun FullScreenDialog(
 
 
 @Composable
-fun RowLayout(loadFromGallery: () -> Unit, launchCamera: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(24.dp, 24.dp, 0.dp, 0.dp))
-            .background(color = MaterialTheme.colors.background),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(modifier = Modifier.height(48.dp))
-        Text(
-            text = "Capture Image For Prediction",
-            color = MaterialTheme.colors.onSurface,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .padding(start = 32.dp, top = 48.dp, end = 32.dp),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            val haptic = LocalHapticFeedback.current
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
-                FloatingActionButton(
-                    contentColor = MaterialTheme.colors.onSurface,
-                    backgroundColor = Color.White,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        launchCamera()
-                    }
-                ) {
-                    Icon(Icons.Outlined.PhotoCamera, "", tint = MaterialTheme.colors.primary)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Take picture",
-                    color = MaterialTheme.colors.onSurface
-                )
-            }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
-                FloatingActionButton(
-                    contentColor = MaterialTheme.colors.onSurface,
-                    backgroundColor = Color.White,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        loadFromGallery()
-                    }
-                ) {
-                    Icon(Icons.Outlined.Image, "", tint = Color.Blue)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Load from gallery", color = MaterialTheme.colors.onSurface)
-            }
+fun HelpDialog(showHelpDialog: MutableState<Boolean>) {
 
-        }
+    if (showHelpDialog.value) {
+        AlertDialog(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            onDismissRequest = { showHelpDialog.value = false },
+            title = { Text(text = "Image capture tips") },
+            text = {
+                Column {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Image(
+                            painter = painterResource(id = R.drawable.help),
+                            contentDescription = "Image with tips for taking cherry photos",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxWidth().heightIn(min=280.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+
+            },
+            dismissButton = {
+                TextButton(onClick = { showHelpDialog.value = false }) {
+                    Text(text = "Close")
+                }
+            }
+        )
     }
 }
