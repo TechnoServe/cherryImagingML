@@ -105,7 +105,7 @@ fun SavedPredictionScreen(predictionId: Long) {
     fun upload(item: Prediction) {
         val fileName = (user?.uid) + "_" + item.id
         val combinedBitmaps = ImageUtils.combineBitmaps(item.inputImage, item.mask)
-        val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps)
+        val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps, fileName)
 
         val fileNames = mutableListOf(fileName)
         val imageUris = mutableListOf(imageUri.toString())

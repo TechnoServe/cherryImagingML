@@ -14,7 +14,6 @@ import android.app.NotificationManager
 
 import android.app.NotificationChannel
 import android.os.Build
-import androidx.compose.ui.res.stringResource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -34,6 +33,7 @@ class UploadWorker(appContext: Context, workerParams: WorkerParameters) :
 
     private val sharedPrefs = Preferences(applicationContext)
     private val db = Firebase.firestore
+    private val region = applicationContext.getString(R.string.app_region)
 
     override fun doWork(): Result {
 
@@ -57,7 +57,7 @@ class UploadWorker(appContext: Context, workerParams: WorkerParameters) :
                 val imageUri = Uri.parse(imageUris?.get(i))
                 val predictionId = predictionIds?.get(i)
                 val storageReference =
-                    FirebaseStorage.getInstance().getReference("images/$fileName")
+                    FirebaseStorage.getInstance().getReference("images/${region.lowercase()}/$fileName")
                 storageReference.putFile(imageUri).addOnSuccessListener {
                     Log.d("UPLOAD", "Uploaded successfully" + it.uploadSessionUri.toString())
                     GlobalScope.launch {
@@ -92,7 +92,7 @@ class UploadWorker(appContext: Context, workerParams: WorkerParameters) :
                                         "underripe" to prediction.underripe,
                                         "overripe" to prediction.overripe,
                                         "predictedAt" to prediction.createdAt,
-                                        "region" to  applicationContext.getString(R.string.app_region)
+                                        "region" to  region
                                     )
 
                                     db.collection("users/$userId/predictions")

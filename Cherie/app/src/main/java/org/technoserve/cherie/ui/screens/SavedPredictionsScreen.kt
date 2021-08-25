@@ -123,6 +123,8 @@ fun SavedPredictionsScreen(
                         }
                     }
                 }
+            } else {
+                refreshListItems()
             }
         }
 
@@ -211,7 +213,7 @@ fun SavedPredictionsScreen(
                 predictionsToSync.forEach {
                     val fileName = (userId) + "_" + it.id
                     val combinedBitmaps = ImageUtils.combineBitmaps(it.inputImage, it.mask)
-                    val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps)
+                    val imageUri = ImageUtils.createTempBitmapUri(context, combinedBitmaps, fileName)
                     fileNames.add(fileName)
                     imageUris.add(imageUri.toString())
                     predictionIds.add(it.id)

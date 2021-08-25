@@ -12,9 +12,8 @@ import java.io.File
 
 class ImageUtils {
     companion object {
-        fun createTempBitmapUri(context: Context, bmp: Bitmap): Uri {
-            // TODO: Replace filename with Unique UID
-            val file = File(context.cacheDir, "MyIMG.png")
+        fun createTempBitmapUri(context: Context, bmp: Bitmap, imgName: String): Uri {
+            val file = File(context.cacheDir, "$imgName.png")
             var outStream: FileOutputStream?
             try {
                 outStream = FileOutputStream(file)
